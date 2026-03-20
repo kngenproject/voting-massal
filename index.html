@@ -5,8 +5,51 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Voting App</title>
 
-<link rel="manifest" href="manifest.json">
-<link rel="stylesheet" href="style.css">
+<!-- PWA -->
+<link rel="manifest" href="data:application/json,{
+  &quot;name&quot;:&quot;Voting App&quot;,
+  &quot;short_name&quot;:&quot;Voting&quot;,
+  &quot;display&quot;:&quot;standalone&quot;
+}">
+
+<style>
+body {
+  font-family: Arial;
+  background: #f4f6f9;
+  padding: 20px;
+}
+h1 { text-align: center; }
+
+.card {
+  background: white;
+  padding: 15px;
+  margin: 10px 0;
+  border-radius: 12px;
+  box-shadow: 0 3px 8px rgba(0,0,0,0.1);
+}
+
+input {
+  padding: 8px;
+  margin: 5px;
+}
+
+button {
+  padding: 8px 12px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.primary { background: #2196F3; color: white; }
+.success { background: #4CAF50; color: white; }
+.danger { background: #f44336; color: white; }
+
+.candidate {
+  display: flex;
+  justify-content: space-between;
+  margin: 5px 0;
+}
+</style>
 
 </head>
 <body>
@@ -31,8 +74,162 @@
   <div id="sessions"></div>
 </div>
 
-<script type="module" src="firebase.js"></script>
-<script type="module" src="app.js"></script>
+<script type="module">
+// 🔥 Firebase
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js";
+import {
+  getFirestore, doc, setDoc, getDoc,
+  updateDoc, increment, collection,
+  addDoc, onSnapshot
+} from "https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js";
+
+// ⚠️ GANTI CONFIG INI
+const firebaseConfig = {
+  apiKey: "ISI_API_KEY",
+  authDomain: "ISI_DOMAIN",
+  projectId: "ISI_PROJECT_ID"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+// DEVICE ID
+function getDeviceId() {
+  let id = localStorage.getItem("deviceId");
+  if (!id) {
+    id = crypto.randomUUID();
+    localStorage.setItem("deviceId", id);
+  }
+  return id;
+}
+
+// GET IP
+async function getIP() {
+  try {
+    const res = await fetch("https://api.ipify.org?format=json");
+    const data = await res.json();
+    return data.ip;
+  } catch {
+    return "unknown";
+  }
+}
+
+// CREATE SESSION
+window.createSession = async () => {
+  const name = document.getElementById("sessionName").value.trim();
+  if (!name) return alert("Isi nama sesi!");
+
+  const ref = doc(db, "sessions", name);
+  const snap = await getDoc(ref);
+
+  if (snap.exists()) return alert("❌ Sesi sudah ada!");
+
+  await setDoc(ref, {
+    active: true,
+    createdAt: Date.now()
+  });
+
+  alert("✅ Sesi dibuat!");
+};
+
+// ADD CANDIDATE
+window.addCandidate = async () => {
+  const sessionId = document.getElementById("sessionId").value;
+  const name = document.getElementById("candidateName").value;
+
+  if (!sessionId || !name) return alert("Isi semua!");
+
+  await addDoc(collection(db, `sessions/${sessionId}/candidates`), {
+    name,
+    votes: 0
+  });
+
+  alert("✅ Kandidat ditambahkan!");
+};
+
+// VOTE (ANTI DEVICE + IP)
+window.vote = async (sessionId, candidateId) => {
+  const deviceId = getDeviceId();
+  const ip = await getIP();
+
+  const voterRef = doc(db, `sessions/${sessionId}/voters/${deviceId}`);
+  const ipRef = doc(db, `sessions/${sessionId}/ipVotes/${ip}`);
+
+  if ((await getDoc(voterRef)).exists()) {
+    return alert("❌ Device sudah voting!");
+  }
+
+  if ((await getDoc(ipRef)).exists()) {
+    return alert("❌ IP sudah voting!");
+  }
+
+  const sessionRef = doc(db, "sessions", sessionId);
+  const sessionSnap = await getDoc(sessionRef);
+
+  if (!sessionSnap.data().active) {
+    return alert("❌ Sesi ditutup!");
+  }
+
+  const candidateRef = doc(db, `sessions/${sessionId}/candidates/${candidateId}`);
+
+  await updateDoc(candidateRef, {
+    votes: increment(1)
+  });
+
+  await setDoc(voterRef, { ip, time: Date.now() });
+  await setDoc(ipRef, { used: true });
+
+  alert("✅ Vote berhasil!");
+};
+
+// TOGGLE SESSION
+window.toggleSession = async (id, status) => {
+  await updateDoc(doc(db, "sessions", id), {
+    active: !status
+  });
+};
+
+// REALTIME LIST
+onSnapshot(collection(db, "sessions"), (snap) => {
+  const container = document.getElementById("sessions");
+  container.innerHTML = "";
+
+  snap.forEach(docSnap => {
+    const data = docSnap.data();
+    const id = docSnap.id;
+
+    const div = document.createElement("div");
+    div.className = "card";
+
+    div.innerHTML = `
+      <b>${id}</b> (${data.active ? "🟢 Aktif" : "🔴 Tutup"})
+      <br>
+      <button onclick="toggleSession('${id}', ${data.active})">
+        ${data.active ? "Tutup" : "Buka"}
+      </button>
+      <div id="c-${id}"></div>
+    `;
+
+    container.appendChild(div);
+
+    onSnapshot(collection(db, `sessions/${id}/candidates`), (cSnap) => {
+      const cDiv = div.querySelector(`#c-${id}`);
+      cDiv.innerHTML = "";
+
+      cSnap.forEach(c => {
+        const d = c.data();
+
+        cDiv.innerHTML += `
+          <div class="candidate">
+            <span>${d.name} (${d.votes})</span>
+            <button onclick="vote('${id}','${c.id}')">Vote</button>
+          </div>
+        `;
+      });
+    });
+  });
+});
+</script>
 
 </body>
 </html>
