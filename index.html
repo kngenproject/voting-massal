@@ -2,39 +2,40 @@
 <html lang="id">
 <head>
 <meta charset="UTF-8">
-<title>Voting App</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Voting App</title>
 
-<style>
-body {
-  font-family: Arial;
-  background: #f4f6f9;
-  padding: 20px;
-}
-h1 { text-align: center; }
+<link rel="manifest" href="manifest.json">
+<link rel="stylesheet" href="style.css">
 
-.card {
-  background: white;
-  padding: 15px;
-  margin: 10px 0;
-  border-radius: 12px;
-  box-shadow: 0 3px 8px rgba(0,0,0,0.1);
-}
+</head>
+<body>
 
-input {
-  padding: 8px;
-  margin: 5px;
-}
+<h1>🔐 Voting App</h1>
 
-button {
-  padding: 8px 12px;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-}
+<div class="card">
+  <h3>Buat Sesi</h3>
+  <input id="sessionName" placeholder="Nama sesi unik">
+  <button class="primary" onclick="createSession()">Buat</button>
+</div>
 
-.primary { background: #2196F3; color: white; }
-.success { background: #4CAF50; color: white; }
+<div class="card">
+  <h3>Tambah Kandidat</h3>
+  <input id="sessionId" placeholder="Nama sesi">
+  <input id="candidateName" placeholder="Nama kandidat">
+  <button class="success" onclick="addCandidate()">Tambah</button>
+</div>
+
+<div class="card">
+  <h3>Daftar Voting</h3>
+  <div id="sessions"></div>
+</div>
+
+<script type="module" src="firebase.js"></script>
+<script type="module" src="app.js"></script>
+
+</body>
+</html>.success { background: #4CAF50; color: white; }
 .danger { background: #f44336; color: white; }
 
 .candidate {
