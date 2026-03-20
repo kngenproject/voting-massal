@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<title>Voting App</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<style>
+body {
+  font-family: Arial;
+  background: #f4f6f9;
+  padding: 20px;
+}
+h1 { text-align: center; }
+
+.card {
+  background: white;
+  padding: 15px;
+  margin: 10px 0;
+  border-radius: 12px;
+  box-shadow: 0 3px 8px rgba(0,0,0,0.1);
+}
+
+input {
+  padding: 8px;
+  margin: 5px;
+}
+
+button {
+  padding: 8px 12px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.primary { background: #2196F3; color: white; }
+.success { background: #4CAF50; color: white; }
+.danger { background: #f44336; color: white; }
+
+.candidate {
+  display: flex;
+  justify-content: space-between;
+  margin: 5px 0;
+}
+</style>
+</head>
+
+<body>
+
+<h1>🔐 Voting App</h1>
+
+<div class="card">
+  <h3>Buat Sesi</h3>
+  <input id="sessionName" placeholder="Nama sesi unik">
+  <button class="primary" onclick="createSession()">Buat</button>
+</div>
+
+<div class="card">
+  <h3>Tambah Kandidat</h3>
+  <input id="sessionId" placeholder="Nama sesi">
+  <input id="candidateName" placeholder="Nama kandidat">
+  <button class="success" onclick="addCandidate()">Tambah</button>
+</div>
+
+<div class="card">
+  <h3>Daftar Voting</h3>
+  <div id="sessions"></div>
+</div>
+
+<script type="module">
+// 🔥 Firebase
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js";
+import {
+  getFirestore,
+  doc,
+  setDoc,
+  getDoc,
+  updateDoc,
+  increment,
+  collection,
+  addDoc,
+  onSnapshot
+} from "https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js";
+
+// ⚙️ CONFIG (GANTI)
+const firebaseConfig = {
+  apiKey: "API_KEY",
+  authDomain: "PROJECT.firebaseapp.com",
+  projectId: "PROJECT_ID"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+// 🧠 DEVICE ID
+function getDeviceId() {
+  let id = localStorage.getItem("deviceId");
+  if (!id) {
+    id = crypto.randomUUID();
+    localStorage.setItem("deviceId", id);
+  }
+  return id;
+}
+
+// 🌐 GET IP
+async function getIP() {
+  try {
+    const res = await fetch("https://api.ipify.org?format=json");
+    const data = await res.json();
+    return data.ip;
+  } catch {
+    return "unknown";
+  }
+}
+
+// 🚀 CREATE SESSION
+window.createSession = async () => {
+  const name = document.getElementById("sessionName").value.trim();
+  if (!name) return alert("Isi nama sesi!");
+
+  const ref = doc(db, "sessions", name);
+  const snap = await getDoc(ref);
+
+  if (snap.exists()) {
+    alert("❌ Nama sesi sudah ada!");
+    return;
+  }
+
+  await setDoc(ref, {
+    active: true,
+    createdAt: Date.now()
+  });
+
+  alert("✅ Sesi dibuat!");
+};
+
+// ➕ ADD CANDIDATE
+window.addCandidate = async () => {
+  const sessionId = document.getElementById("sessionId").value;
+  const name = document.getElementById("candidateName").value;
+
+  if (!sessionId || !name) return alert("Isi semua!");
+
+  await addDoc(collection(db, `sessions/${sessionId}/candidates`), {
+    name: name,
+    votes: 0
+  });
+
+  alert("✅ Kandidat ditambahkan!");
+};
+
+// 🗳️ VOTE (ANTI DEVICE + IP)
+window.vote = async (sessionId, candidateId) => {
+  const deviceId = getDeviceId();
+  const ip = await getIP();
+
+  const voterRef = doc(db, `sessions/${sessionId}/voters/${deviceId}`);
+  const ipRef = doc(db, `sessions/${sessionId}/ipVotes/${ip}`);
+
+  const voterSnap = await getDoc(voterRef);
+  const ipSnap = await getDoc(ipRef);
+
+  if (voterSnap.exists()) {
+    alert("❌ Device ini sudah voting!");
+    return;
+  }
+
+  if (ipSnap.exists()) {
+    alert("❌ IP ini sudah voting!");
+    return;
+  }
+
+  const sessionRef = doc(db, "sessions", sessionId);
+  const sessionSnap = await getDoc(sessionRef);
+
+  if (!sessionSnap.data().active) {
+    alert("Sesi sudah ditutup!");
+    return;
+  }
+
+  const candidateRef = doc(db, `sessions/${sessionId}/candidates/${candidateId}`);
+
+  await updateDoc(candidateRef, {
+    votes: increment(1)
+  });
+
+  await setDoc(voterRef, {
+    voted: true,
+    ip: ip,
+    time: Date.now()
+  });
+
+  await setDoc(ipRef, {
+    used: true,
+    time: Date.now()
+  });
+
+  alert("✅ Vote berhasil!");
+};
+
+// 🔒 TOGGLE SESSION
+window.toggleSession = async (id, status) => {
+  await updateDoc(doc(db, "sessions", id), {
+    active: !status
+  });
+};
+
+// 👀 REALTIME LIST
+onSnapshot(collection(db, "sessions"), (snap) => {
+  const container = document.getElementById("sessions");
+  container.innerHTML = "";
+
+  snap.forEach(docSnap => {
+    const data = docSnap.data();
+    const id = docSnap.id;
+
+    const div = document.createElement("div");
+    div.className = "card";
+
+    div.innerHTML = `
+      <b>${id}</b> (${data.active ? "🟢 Aktif" : "🔴 Nonaktif"})
+      <br>
+      <button onclick="toggleSession('${id}', ${data.active})">
+        ${data.active ? "Tutup" : "Buka"}
+      </button>
+      <div id="c-${id}"></div>
+    `;
+
+    container.appendChild(div);
+
+    onSnapshot(collection(db, `sessions/${id}/candidates`), (cSnap) => {
+      const cDiv = div.querySelector(`#c-${id}`);
+      cDiv.innerHTML = "";
+
+      cSnap.forEach(c => {
+        const d = c.data();
+
+        const el = document.createElement("div");
+        el.className = "candidate";
+
+        el.innerHTML = `
+          <span>${d.name} (${d.votes})</span>
+          <button onclick="vote('${id}', '${c.id}')">Vote</button>
+        `;
+
+        cDiv.appendChild(el);
+      });
+    });
+  });
+});
+</script>
+
+</body>
+</html>
