@@ -545,9 +545,8 @@ window.createSession = async () => {
   if (snap.exists()) { toast("❌ Nama sesi sudah digunakan!", "error"); return; }
 
   const creatorDeviceId = getDeviceId();
-  const creatorIp       = await getIP();
 
-  await setDoc(ref, { active: true, createdAt: Date.now(), creatorDeviceId, creatorIp });
+  await setDoc(ref, { active: true, createdAt: Date.now(), creatorDeviceId });
   document.getElementById("sessionName").value = "";
   toast(`✅ Sesi "${name}" berhasil dibuat!`);
 };
@@ -608,10 +607,8 @@ window.deleteSession = (id) => {
 
         const sData = sessionSnap.data();
         const myDeviceId = getDeviceId();
-        const myIp       = await getIP();
 
-        const isOwner = sData.creatorDeviceId === myDeviceId || sData.creatorIp === myIp;
-        if (!isOwner) {
+        if (sData.creatorDeviceId !== myDeviceId) {
           toast("🚫 Kamu bukan pembuat sesi ini.", "error");
           return;
         }
