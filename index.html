@@ -293,6 +293,12 @@ input[type="text"]:focus {
   flex-shrink: 0;
 }
 
+/* ── SHARE BTN ──────────────────────────── */
+.share-btn {
+  padding: 5px 10px;
+  font-size: .72rem;
+}
+
 /* ── TOAST ──────────────────────────────── */
 #toast-wrap {
   position: fixed; bottom: calc(var(--nav-h) + 10px);
@@ -647,7 +653,7 @@ window.deleteSession = (id) => {
 };
 
 // ── RENDER CANDIDATES ─────────────────────
-function renderCandidates(sessionId, cSnap, container, isActive, isVoter) {
+function renderCandidates(sessionId, cSnap, container, isActive, isVoter, showResults) {
   if (cSnap.empty) {
     container.innerHTML = `<div class="empty"><p>Belum ada kandidat.</p></div>`;
     return;
@@ -665,7 +671,12 @@ function renderCandidates(sessionId, cSnap, container, isActive, isVoter) {
     row.className = "candidate-row";
     row.innerHTML = `
       <span class="cand-name">${d.name}</span>
-      <span class="cand-votes">${d.votes} suara (${pct}%)</span>
+      ${showResults
+        ? `<span class="cand-votes">${d.votes} suara (${pct}%)</span>`
+        : votedSessions.has(sessionId)
+          ? `<span class="cand-votes" style="color:var(--accent)">✓ Kamu sudah memilih</span>`
+          : `<span class="cand-votes" style="color:var(--ink-muted);font-style:italic">Hasil disembunyikan</span>`
+      }
       <div class="cand-action">
         ${isVoter
           ? isActive
@@ -675,9 +686,10 @@ function renderCandidates(sessionId, cSnap, container, isActive, isVoter) {
             : `<span class="badge badge-gray">Tutup</span>`
           : ""}
       </div>
+      ${showResults ? `
       <div class="vote-bar-wrap">
         <div class="vote-bar" style="width:${pct}%"></div>
-      </div>
+      </div>` : ""}
     `;
     container.appendChild(row);
   });
@@ -715,6 +727,70 @@ window.clearSearch = () => {
   filterSessions("");
   input.focus();
 };
+
+// ── SHARE SESSION ─────────────────────────
+window.shareSession = async (id) => {
+  const url = new URL(location.href);
+  url.hash = "";
+  url.searchParams.set("poll", id);
+  const shareUrl = url.toString();
+
+  if (navigator.share) {
+    try {
+      await navigator.share({
+        title: `VoteKu — ${id}`,
+        text: `Ikut polling "${id}" di VoteKu!`,
+        url: shareUrl,
+      });
+    } catch (e) {
+      if (e.name !== "AbortError") copyToClipboard(shareUrl);
+    }
+  } else {
+    copyToClipboard(shareUrl);
+  }
+};
+
+function copyToClipboard(text) {
+  navigator.clipboard?.writeText(text).then(() => {
+    toast("🔗 Link disalin ke clipboard!");
+  }).catch(() => {
+    // fallback for older browsers
+    const el = document.createElement("textarea");
+    el.value = text; el.style.position = "fixed"; el.style.opacity = "0";
+    document.body.appendChild(el); el.select();
+    document.execCommand("copy");
+    document.body.removeChild(el);
+    toast("🔗 Link disalin ke clipboard!");
+  });
+}
+
+// ── DEEP LINK: auto-scroll to ?poll=xxx ───
+function handleDeepLink() {
+  const params = new URLSearchParams(location.search);
+  const pollId = params.get("poll");
+  if (!pollId) return;
+
+  // Switch to vote tab
+  switchTab("vote");
+
+  // Highlight the target card once rendered
+  const tryHighlight = (attempts = 0) => {
+    const cards = document.querySelectorAll("#voter-sessions .session-card");
+    for (const card of cards) {
+      if (card.querySelector(".session-name")?.textContent === pollId) {
+        card.scrollIntoView({ behavior: "smooth", block: "center" });
+        card.style.outline = "2.5px solid var(--accent)";
+        card.style.borderRadius = "var(--radius)";
+        setTimeout(() => { card.style.outline = ""; }, 2500);
+        return;
+      }
+    }
+    if (attempts < 15) setTimeout(() => tryHighlight(attempts + 1), 300);
+  };
+  setTimeout(() => tryHighlight(), 400);
+}
+
+handleDeepLink();
 
 // ── REALTIME LISTENER ────────────────────
 // Track per-session vote totals & unsubscribe old listeners on re-render
@@ -770,6 +846,9 @@ onSnapshot(collection(db, "sessions"), (snap) => {
           <span class="badge ${data.active ? "badge-green" : "badge-red"}">
             ${data.active ? "🟢 Aktif" : "🔴 Ditutup"}
           </span>
+          <button class="btn btn-ghost btn-sm share-btn" onclick="shareSession('${id}')" title="Bagikan">
+            🔗 Bagikan
+          </button>
         </div>
       </div>
       <div class="candidates-list" id="vc-${id}">
@@ -816,8 +895,8 @@ onSnapshot(collection(db, "sessions"), (snap) => {
       const vcDiv = document.getElementById(`vc-${id}`);
       const acDiv = document.getElementById(`ac-${id}`);
 
-      if (vcDiv) renderCandidates(id, cSnap, vcDiv, data.active, true);
-      if (acDiv) renderCandidates(id, cSnap, acDiv, data.active, false);
+      if (vcDiv) renderCandidates(id, cSnap, vcDiv, data.active, true, isOwner);
+      if (acDiv) renderCandidates(id, cSnap, acDiv, data.active, false, true);
 
       updateStats();
     });
