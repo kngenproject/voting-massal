@@ -544,32 +544,51 @@ function getDeviceId() {
   return id;
 }
 
+// ── VOTED SESSIONS (local cache) ─────────
+// Stores sessionIds this device has voted in — survives re-renders
+const votedSessions = new Set(
+  JSON.parse(localStorage.getItem("voteku_voted") || "[]")
+);
+function markVoted(sessionId) {
+  votedSessions.add(sessionId);
+  localStorage.setItem("voteku_voted", JSON.stringify([...votedSessions]));
+}
+
 // ── VOTE ──────────────────────────────────
 window.vote = async (sessionId, candidateId, btn) => {
   btn.disabled = true;
   btn.textContent = "...";
 
-  const deviceId = getDeviceId();
-  const voterRef = doc(db, `sessions/${sessionId}/voters/${deviceId}`);
+  try {
+    const deviceId = getDeviceId();
+    const voterRef = doc(db, `sessions/${sessionId}/voters/${deviceId}`);
 
-  const [voterSnap, sessionSnap] = await Promise.all([
-    getDoc(voterRef),
-    getDoc(doc(db, "sessions", sessionId))
-  ]);
+    const [voterSnap, sessionSnap] = await Promise.all([
+      getDoc(voterRef),
+      getDoc(doc(db, "sessions", sessionId))
+    ]);
 
-  if (voterSnap.exists()) {
-    toast("⚠️ Perangkat ini sudah pernah voting!", "warn");
-    btn.disabled = false; btn.textContent = "Vote"; return;
+    if (voterSnap.exists()) {
+      markVoted(sessionId);
+      toast("⚠️ Perangkat ini sudah pernah voting!", "warn");
+      btn.disabled = false; btn.textContent = "Vote"; return;
+    }
+    if (!sessionSnap.data()?.active) {
+      toast("❌ Sesi voting sudah ditutup.", "error");
+      btn.disabled = false; btn.textContent = "Vote"; return;
+    }
+
+    await updateDoc(doc(db, `sessions/${sessionId}/candidates/${candidateId}`), { votes: increment(1) });
+    await setDoc(voterRef, { voted: true, time: Date.now() });
+
+    markVoted(sessionId);
+    btn.textContent = "✓ Voted";
+    toast("✅ Vote berhasil! Terima kasih.");
+  } catch (e) {
+    toast(`❌ Gagal vote: ${e.message || e.code || "unknown"}`, "error");
+    btn.disabled = false;
+    btn.textContent = "Vote";
   }
-  if (!sessionSnap.data()?.active) {
-    toast("❌ Sesi voting sudah ditutup.", "error");
-    btn.disabled = false; btn.textContent = "Vote"; return;
-  }
-
-  await updateDoc(doc(db, `sessions/${sessionId}/candidates/${candidateId}`), { votes: increment(1) });
-  await setDoc(voterRef, { voted: true, time: Date.now() });
-
-  toast("✅ Vote berhasil! Terima kasih.");
 };
 
 // ── CREATE SESSION ────────────────────────
@@ -599,6 +618,11 @@ window.addCandidate = async () => {
   const sessionSnap = await getDoc(doc(db, "sessions", sessionId));
   if (!sessionSnap.exists()) { toast("❌ Sesi tidak ditemukan!", "error"); return; }
 
+  if (sessionSnap.data().creatorDeviceId !== getDeviceId()) {
+    toast("🚫 Hanya pembuat sesi yang bisa menambah kandidat.", "error");
+    return;
+  }
+
   await addDoc(collection(db, `sessions/${sessionId}/candidates`), { name, votes: 0 });
   document.getElementById("candidateName").value = "";
   toast(`✅ Kandidat "${name}" ditambahkan!`);
@@ -606,6 +630,14 @@ window.addCandidate = async () => {
 
 // ── TOGGLE SESSION ────────────────────────
 window.toggleSession = async (id, current) => {
+  const sessionSnap = await getDoc(doc(db, "sessions", id));
+  if (!sessionSnap.exists()) { toast("❌ Sesi tidak ditemukan.", "error"); return; }
+
+  if (sessionSnap.data().creatorDeviceId !== getDeviceId()) {
+    toast("🚫 Hanya pembuat sesi yang bisa mengubah status ini.", "error");
+    return;
+  }
+
   await updateDoc(doc(db, "sessions", id), { active: !current });
   toast(`Sesi "${id}" ${current ? "ditutup" : "dibuka"}.`);
 };
@@ -693,11 +725,13 @@ function renderCandidates(sessionId, cSnap, container, isActive, isVoter) {
     row.innerHTML = `
       <span class="cand-name">${d.name}</span>
       <span class="cand-votes">${d.votes} suara (${pct}%)</span>
-      ${isVoter && isActive
-        ? `<button class="btn btn-primary btn-sm" onclick="vote('${sessionId}','${d.id}',this)">Vote</button>`
-        : isVoter
-          ? `<span class="badge badge-gray">Tutup</span>`
-          : ""}
+      ${isVoter
+        ? isActive
+          ? votedSessions.has(sessionId)
+            ? `<span class="badge badge-green">✓ Voted</span>`
+            : `<button class="btn btn-primary btn-sm" onclick="vote('${sessionId}','${d.id}',this)">Vote</button>`
+          : `<span class="badge badge-gray">Tutup</span>`
+        : ""}
       <div class="vote-bar-wrap" style="grid-column:1/-1">
         <div class="vote-bar" style="width:${pct}%"></div>
       </div>
@@ -816,10 +850,12 @@ onSnapshot(collection(db, "sessions"), (snap) => {
           <span class="badge ${data.active ? "badge-green" : "badge-gray"}">
             ${data.active ? "Aktif" : "Nonaktif"}
           </span>
+          ${isOwner ? `
           <button class="btn btn-ghost btn-sm" onclick="toggleSession('${id}',${data.active})">
             ${data.active ? "Tutup Sesi" : "Buka Sesi"}
           </button>
-          ${isOwner ? `<button class="btn btn-red btn-sm" onclick="deleteSession('${id}')">🗑️ Hapus</button>` : ""}
+          <button class="btn btn-red btn-sm" onclick="deleteSession('${id}')">🗑️ Hapus</button>
+          ` : ""}
         </div>
       </div>
       <div class="candidates-list" id="ac-${id}"></div>
