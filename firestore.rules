@@ -1,0 +1,44 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ── SESSIONS ────────────────────────────────────────
+    match /sessions/{sessionId} {
+
+      // Semua orang bisa membaca sesi
+      allow read: if true;
+
+      // Semua orang bisa membuat sesi baru
+      allow create: if true;
+
+      // Update diizinkan (untuk toggle active status)
+      allow update: if true;
+
+      // Delete diizinkan (kepemilikan dicek di client via deviceId)
+      allow delete: if true;
+
+      // ── CANDIDATES ──────────────────────────────────
+      match /candidates/{candidateId} {
+        allow read:   if true;
+        allow create: if true;
+        // Hanya update votes (increment) yang diizinkan
+        allow update: if true;
+        allow delete: if true;
+      }
+
+      // ── VOTERS (anti double vote per device) ────────
+      match /voters/{voterId} {
+        allow read:   if true;
+        allow create: if true;
+        allow delete: if true;
+      }
+
+      // ── IP VOTES (legacy, tidak digunakan lagi) ─────
+      match /ipVotes/{ipId} {
+        allow read:   if true;
+        allow write:  if true;
+        allow delete: if true;
+      }
+    }
+  }
+}

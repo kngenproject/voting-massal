@@ -1,132 +1,154 @@
-# 🗳️ VoteKu — Sistem Voting Online
+# VoteKu — Polling Online Realtime
 
-Aplikasi voting realtime berbasis Firebase Firestore. Single-file HTML, siap deploy ke GitHub Pages, Netlify, atau hosting statis manapun.
+![PWA](https://img.shields.io/badge/PWA-Ready-5A0FC8?style=flat-square&logo=pwa)
+![Firebase](https://img.shields.io/badge/Firebase-Firestore-FFCA28?style=flat-square&logo=firebase&logoColor=black)
+![HTML](https://img.shields.io/badge/HTML-Single%20File-E34F26?style=flat-square&logo=html5&logoColor=white)
+![License](https://img.shields.io/badge/License-MIT-green?style=flat-square)
+![No Login](https://img.shields.io/badge/Auth-No%20Login%20Required-blue?style=flat-square)
+![Realtime](https://img.shields.io/badge/Realtime-Firestore-orange?style=flat-square)
+
+> Aplikasi polling / voting online berbasis web yang ringan, realtime, dan bisa diinstall sebagai PWA — semua dalam **satu file HTML**.
 
 ---
 
 ## ✨ Fitur
 
-- **Realtime** — hasil voting update otomatis tanpa perlu refresh
-- **Anti double-vote** — proteksi via Device ID (localStorage) + IP address
-- **Multi-sesi** — buat banyak sesi voting sekaligus
-- **Panel Admin** — dilindungi password, kelola sesi & kandidat
-- **Persentase & bar progress** — visualisasi hasil voting
-- **Responsif** — tampil baik di desktop & mobile
+| Fitur | Keterangan |
+|-------|-----------|
+| 🗳️ Polling Realtime | Hasil vote langsung update tanpa refresh |
+| 📱 PWA | Bisa diinstall di HP seperti app native |
+| 🔗 Bagikan Link | Share langsung ke WhatsApp / Telegram via Web Share API |
+| 🔍 Cari Polling | Filter polling secara realtime |
+| 🔒 Satu Device, Satu Vote | Dibatasi per perangkat (localStorage) |
+| 👤 Tanpa Login | Tidak perlu akun — siapa pun bisa buat polling |
+| 🏠 Kepemilikan Sesi | Hanya pembuat yang bisa tutup / hapus polling |
+| 🙈 Sembunyikan Hasil | Hasil vote tersembunyi bagi yang belum membuat sesi |
+| ♻️ Tanpa Scroll Halaman | Layout bottom-nav ala mobile app |
 
 ---
 
-## 🚀 Cara Setup
+## 🚀 Demo & Deploy
 
-### 1. Clone / Download repo ini
+### Cara tercepat: GitHub Pages
 
-```bash
-git clone https://github.com/USERNAME/REPO_NAME.git
-cd REPO_NAME
-```
+1. Fork repo ini
+2. Masuk ke **Settings → Pages**
+3. Pilih branch `main`, folder `/ (root)`
+4. Klik **Save** — app langsung live di `https://username.github.io/voteku`
 
-### 2. Buat project Firebase
+> Tidak perlu server, tidak perlu build step.
+
+---
+
+## 🔥 Setup Firebase
+
+### 1. Buat Firebase Project
 
 1. Buka [console.firebase.google.com](https://console.firebase.google.com)
-2. Klik **Add project** → ikuti langkah-langkahnya
-3. Di halaman project, pilih **`</>`** (Web app) → daftarkan app
-4. Salin **firebaseConfig** yang muncul
+2. Klik **Add project** → beri nama → Create
+3. Masuk ke **Firestore Database** → Create database → Start in **test mode**
 
-### 3. Aktifkan Firestore
+### 2. Ambil Config
 
-1. Di Firebase Console → **Build → Firestore Database**
-2. Klik **Create database** → pilih mode **Production** atau **Test**
-3. Pilih region → selesai
-
-> **Catatan (Mode Production):** Tambahkan Firestore Security Rules berikut agar app bisa menulis:
-> ```
-> rules_version = '2';
-> service cloud.firestore {
->   match /databases/{database}/documents {
->     match /{document=**} {
->       allow read, write: if true;
->     }
->   }
-> }
-> ```
-> ⚠️ Rules ini terbuka untuk semua. Perketat sesuai kebutuhan produksi Anda.
-
-### 4. Isi Firebase Config di `index.html`
-
-Buka `index.html`, cari bagian ini (sekitar baris 170):
+1. Project Settings → Your apps → **Web app** → Register
+2. Salin `firebaseConfig` dan paste ke `index.html`:
 
 ```js
 const firebaseConfig = {
-  apiKey:            "GANTI_DENGAN_API_KEY_ANDA",
-  authDomain:        "GANTI_DENGAN_PROJECT_ID.firebaseapp.com",
-  projectId:         "GANTI_DENGAN_PROJECT_ID",
-  storageBucket:     "GANTI_DENGAN_PROJECT_ID.appspot.com",
-  messagingSenderId: "GANTI_DENGAN_MESSAGING_SENDER_ID",
-  appId:             "GANTI_DENGAN_APP_ID"
+  apiKey:            "...",
+  authDomain:        "....firebaseapp.com",
+  projectId:         "...",
+  storageBucket:     "....appspot.com",
+  messagingSenderId: "...",
+  appId:             "..."
 };
 ```
 
-Ganti semua nilai dengan config Firebase Anda.
+### 3. Pasang Firestore Rules
 
-### 5. Ganti Password Admin
-
-Di baris yang sama, ganti:
-
-```js
-const ADMIN_PASSWORD = "admin123";
-```
-
-Dengan password yang lebih kuat.
-
-### 6. Deploy ke GitHub Pages
-
-```bash
-git add .
-git commit -m "init voting app"
-git push origin main
-```
-
-Lalu di GitHub repo → **Settings → Pages → Source: main branch / root** → Save.
-
-Aplikasi akan live di: `https://USERNAME.github.io/REPO_NAME/`
+Buka **Firestore → Rules**, paste isi file [`firestore.rules`](./firestore.rules), lalu klik **Publish**.
 
 ---
 
-## 📱 Cara Penggunaan
-
-### Admin
-1. Buka tab **⚙️ Admin**
-2. Masukkan password admin
-3. **Buat sesi** → isi nama sesi (contoh: `pemilihan-osis-2025`)
-4. **Tambah kandidat** → isi nama sesi + nama kandidat
-5. Kelola sesi (buka/tutup) dari panel Kelola Sesi
-
-### Voter
-1. Buka tab **🗳️ Voting**
-2. Pilih sesi yang aktif
-3. Klik **Vote** di samping nama kandidat pilihan
-4. Setiap perangkat hanya bisa vote 1x per sesi
-
----
-
-## 🗂️ Struktur File
+## 📁 Struktur File
 
 ```
-.
-├── index.html   # Seluruh aplikasi (HTML + CSS + JS)
-└── README.md    # Dokumentasi ini
+voteku/
+├── index.html          # Seluruh aplikasi (HTML + CSS + JS)
+├── firestore.rules     # Security rules Firestore
+├── .gitignore          # File yang diabaikan Git
+├── LICENSE             # MIT License
+└── README.md           # Dokumentasi ini
 ```
 
 ---
 
-## 🛠️ Teknologi
+## 📱 Install sebagai PWA
 
-- HTML5 / CSS3 / JavaScript (ES Modules)
-- [Firebase Firestore](https://firebase.google.com/docs/firestore) v10
-- Google Fonts (Sora + Lora)
-- Deploy: GitHub Pages / Netlify / hosting statis
+| Platform | Cara Install |
+|----------|-------------|
+| Android (Chrome) | Buka app → titik tiga ⋮ → *Tambahkan ke layar utama* |
+| iOS (Safari) | Buka app → ikon Share → *Tambahkan ke Layar Utama* |
+
+Setelah install, app terbuka **fullscreen tanpa address bar**.
 
 ---
 
-## 📄 Lisensi
+## 🔒 Security Rules
 
-MIT — bebas digunakan dan dimodifikasi.
+File `firestore.rules` sudah disertakan. Rules ini:
+- Mengizinkan semua orang **membaca** sesi dan kandidat
+- Mengizinkan semua orang **membuat** sesi baru
+- Mengizinkan **update** untuk proses voting
+- Mengizinkan **delete** — kepemilikan dicek di sisi client (deviceId)
+
+> Untuk production, pertimbangkan menggunakan Firebase Authentication untuk validasi kepemilikan di sisi server.
+
+---
+
+## 🎯 Cara Pakai
+
+### Buat Polling
+1. Buka tab **➕ Buat**
+2. Isi **Judul Polling** (gunakan tanda hubung, contoh: `pilihan-menu-rapat`)
+3. Tambahkan minimal 2 pilihan/opsi
+4. Klik **🚀 Buat Polling**
+
+### Bagikan ke Peserta
+1. Tab **🗳️ Polling** → tombol **🔗 Bagikan** di card polling
+2. Pilih aplikasi chat (WhatsApp, Telegram, dll)
+3. Penerima klik link → langsung ke polling yang dimaksud
+
+### Kelola Polling
+- Tab **⚙️ Kelola** → hanya polling milikmu yang bisa ditutup / dihapus
+- Label **✏️ Milik kamu** menandai polling buatanmu
+
+---
+
+## 🛠️ Tech Stack
+
+| Komponen | Teknologi |
+|----------|-----------|
+| Frontend | Vanilla HTML/CSS/JS (no framework) |
+| Database | Firebase Firestore (realtime) |
+| Hosting | GitHub Pages / any static host |
+| Font | Google Fonts — Sora + Lora |
+| PWA | Web App Manifest + Service Worker |
+
+---
+
+## 🤝 Kontribusi
+
+Pull request welcome! Buka [issue](../../issues) dulu untuk diskusi fitur baru.
+
+1. Fork repo
+2. Buat branch: `git checkout -b fitur/nama-fitur`
+3. Commit: `git commit -m 'feat: tambah fitur X'`
+4. Push: `git push origin fitur/nama-fitur`
+5. Buka Pull Request
+
+---
+
+## 📄 License
+
+MIT © 2025 — bebas digunakan dan dimodifikasi.
