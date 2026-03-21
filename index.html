@@ -316,19 +316,7 @@ input:focus {
   <!-- ── ADMIN PANEL ── -->
   <div class="panel" id="panel-admin">
 
-    <!-- Admin login -->
-    <div id="admin-lock" class="card">
-      <div class="card-title">Akses Admin</div>
-      <div class="form-row">
-        <div class="field">
-          <label>Password Admin</label>
-          <input type="password" id="adminPass" placeholder="Masukkan password admin" onkeydown="if(event.key==='Enter')adminLogin()">
-        </div>
-        <button class="btn btn-primary" onclick="adminLogin()">Masuk</button>
-      </div>
-    </div>
-
-    <div id="admin-content" style="display:none">
+    <div id="admin-content">
 
       <!-- Stats -->
       <div class="card" id="admin-stats">
@@ -399,16 +387,14 @@ const firebaseConfig = {
   appId:             "1:825776451499:web:5edf29d850e36c78b66cee"
 };
 
-// 🔐 PASSWORD ADMIN (ganti sesuai kebutuhan)
-const ADMIN_PASSWORD = "admin123";
-
 // ─────────────────────────────────────────
 
 import { initializeApp }        from "https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js";
 import {
   getFirestore, doc, setDoc, getDoc,
   updateDoc, increment, collection,
-  addDoc, onSnapshot, query, orderBy
+  addDoc, onSnapshot, query, orderBy,
+  deleteDoc, getDocs
 } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js";
 
 const app = initializeApp(firebaseConfig);
@@ -432,17 +418,6 @@ window.switchTab = (name) => {
   document.querySelectorAll(".panel").forEach((p,i) => {
     p.classList.toggle("active", (name==="voter"&&i===0)||(name==="admin"&&i===1));
   });
-};
-
-// ── ADMIN AUTH ────────────────────────────
-window.adminLogin = () => {
-  const pw = document.getElementById("adminPass").value;
-  if (pw === ADMIN_PASSWORD) {
-    document.getElementById("admin-lock").style.display = "none";
-    document.getElementById("admin-content").style.display = "block";
-  } else {
-    toast("❌ Password salah!", "error");
-  }
 };
 
 // ── DEVICE ID ─────────────────────────────
@@ -531,6 +506,33 @@ window.addCandidate = async () => {
 window.toggleSession = async (id, current) => {
   await updateDoc(doc(db, "sessions", id), { active: !current });
   toast(`Sesi "${id}" ${current ? "ditutup" : "dibuka"}.`);
+};
+
+// ── DELETE SESSION ────────────────────────
+window.deleteSession = async (id) => {
+  if (!confirm(`Hapus sesi "${id}"? Semua data kandidat dan vote akan terhapus permanen.`)) return;
+
+  try {
+    // Hapus subcollection candidates
+    const cSnap = await getDocs(collection(db, `sessions/${id}/candidates`));
+    await Promise.all(cSnap.docs.map(d => deleteDoc(d.ref)));
+
+    // Hapus subcollection voters
+    const vSnap = await getDocs(collection(db, `sessions/${id}/voters`));
+    await Promise.all(vSnap.docs.map(d => deleteDoc(d.ref)));
+
+    // Hapus subcollection ipVotes
+    const iSnap = await getDocs(collection(db, `sessions/${id}/ipVotes`));
+    await Promise.all(iSnap.docs.map(d => deleteDoc(d.ref)));
+
+    // Hapus dokumen sesi
+    await deleteDoc(doc(db, "sessions", id));
+
+    toast(`🗑️ Sesi "${id}" berhasil dihapus.`);
+  } catch (e) {
+    toast("❌ Gagal menghapus sesi.", "error");
+    console.error(e);
+  }
 };
 
 // ── RENDER CANDIDATES ─────────────────────
@@ -624,6 +626,7 @@ onSnapshot(collection(db, "sessions"), (snap) => {
           <button class="btn btn-ghost btn-sm" onclick="toggleSession('${id}',${data.active})">
             ${data.active ? "Tutup Sesi" : "Buka Sesi"}
           </button>
+          <button class="btn btn-red btn-sm" onclick="deleteSession('${id}')">🗑️ Hapus</button>
         </div>
       </div>
       <div class="candidates-list" id="ac-${id}"></div>
