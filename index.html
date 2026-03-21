@@ -2,128 +2,149 @@
 <html lang="id">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>VoteKu — Sistem Voting Online</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0d1117">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="VoteKu">
+<title>VoteKu — Polling Online</title>
+<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' rx='100' fill='%230d1117'/%3E%3Ctext x='256' y='340' text-anchor='middle' font-size='280' font-family='serif'%3E🗳%3C/text%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&family=Lora:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
-
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 :root {
-  --ink:        #0d1117;
-  --ink-soft:   #374151;
-  --ink-muted:  #9ca3af;
-  --surface:    #ffffff;
-  --surface-2:  #f8fafc;
-  --border:     #e5e7eb;
-  --accent:     #1a5f4a;
-  --accent-lt:  #d1fae5;
-  --accent-dk:  #134035;
-  --red:        #dc2626;
-  --red-lt:     #fee2e2;
-  --amber:      #d97706;
-  --amber-lt:   #fef3c7;
-  --blue:       #2563eb;
-  --blue-lt:    #dbeafe;
-  --radius:     14px;
-  --shadow:     0 2px 8px rgba(0,0,0,.07), 0 0 0 1px rgba(0,0,0,.04);
-  --shadow-lg:  0 12px 40px rgba(0,0,0,.12);
+  --ink:       #0d1117;
+  --ink-soft:  #374151;
+  --ink-muted: #9ca3af;
+  --surface:   #ffffff;
+  --surface-2: #f8fafc;
+  --border:    #e5e7eb;
+  --accent:    #1a5f4a;
+  --accent-lt: #d1fae5;
+  --accent-dk: #134035;
+  --red:       #dc2626;
+  --red-lt:    #fee2e2;
+  --amber:     #d97706;
+  --radius:    14px;
+  --shadow:    0 2px 8px rgba(0,0,0,.07), 0 0 0 1px rgba(0,0,0,.04);
+  --shadow-lg: 0 12px 40px rgba(0,0,0,.12);
+  --nav-h:     64px;
+  --header-h:  54px;
 }
 
-html { scroll-behavior: smooth; }
-
-body {
+html, body {
+  height: 100%; overflow: hidden;
   font-family: 'Sora', sans-serif;
   background: var(--surface-2);
   color: var(--ink);
-  min-height: 100vh;
   font-size: 15px;
   line-height: 1.6;
 }
 
-/* ── HEADER ──────────────────────────────── */
+/* ── HEADER ─────────────────────────────── */
 header {
+  position: fixed; top: 0; left: 0; right: 0;
+  height: var(--header-h);
   background: var(--ink);
-  padding: 0 24px;
-  position: sticky; top: 0; z-index: 100;
   display: flex; align-items: center; justify-content: space-between;
-  height: 60px;
+  padding: 0 20px;
+  z-index: 200;
 }
 .logo {
   font-family: 'Lora', serif;
-  font-size: 1.2rem;
-  color: #fff;
+  font-size: 1.15rem; color: #fff;
   letter-spacing: -.02em;
 }
 .logo span { color: #6ee7b7; }
 .header-badge {
-  font-size: .72rem; font-weight: 600; letter-spacing: .06em;
+  font-size: .68rem; font-weight: 600; letter-spacing: .06em;
   text-transform: uppercase; color: var(--ink-muted);
   background: rgba(255,255,255,.07);
-  padding: 4px 10px; border-radius: 20px;
+  padding: 3px 9px; border-radius: 20px;
 }
 
-/* ── LAYOUT ──────────────────────────────── */
-.page {
-  max-width: 840px;
-  margin: 0 auto;
-  padding: 32px 20px 80px;
+/* ── PANELS ─────────────────────────────── */
+.panels {
+  position: fixed;
+  top: var(--header-h);
+  bottom: var(--nav-h);
+  left: 0; right: 0;
+  overflow: hidden;
+}
+.panel {
+  position: absolute; inset: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 16px 16px 8px;
+  opacity: 0; pointer-events: none;
+  transform: translateY(10px);
+  transition: opacity .2s ease, transform .2s ease;
+}
+.panel.active {
+  opacity: 1; pointer-events: all;
+  transform: translateY(0);
 }
 
-/* ── TABS ────────────────────────────────── */
-.tabs {
-  display: flex; gap: 4px;
-  background: var(--border);
-  border-radius: 12px;
-  padding: 4px;
-  margin-bottom: 28px;
-}
-.tab {
-  flex: 1; text-align: center;
-  padding: 9px;
-  border-radius: 9px;
-  cursor: pointer;
-  font-size: .85rem; font-weight: 600;
-  color: var(--ink-muted);
-  transition: all .2s;
-  user-select: none;
-}
-.tab.active {
+/* ── BOTTOM NAV ─────────────────────────── */
+nav {
+  position: fixed; bottom: 0; left: 0; right: 0;
+  height: var(--nav-h);
   background: var(--surface);
-  color: var(--ink);
-  box-shadow: var(--shadow);
+  border-top: 1px solid var(--border);
+  display: flex;
+  z-index: 200;
+  box-shadow: 0 -4px 16px rgba(0,0,0,.06);
+}
+.nav-item {
+  flex: 1;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  gap: 3px;
+  cursor: pointer;
+  color: var(--ink-muted);
+  font-size: .68rem; font-weight: 600;
+  letter-spacing: .03em;
+  transition: color .18s;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  border: none; background: none;
+  padding: 0;
+}
+.nav-item .nav-icon {
+  font-size: 1.35rem;
+  transition: transform .2s ease;
+}
+.nav-item.active {
+  color: var(--accent);
+}
+.nav-item.active .nav-icon {
+  transform: translateY(-2px);
 }
 
-.panel { display: none; }
-.panel.active { display: block; }
-
-/* ── CARD ────────────────────────────────── */
+/* ── CARD ───────────────────────────────── */
 .card {
   background: var(--surface);
   border-radius: var(--radius);
-  padding: 22px 24px;
-  margin-bottom: 16px;
+  padding: 18px 16px;
+  margin-bottom: 12px;
   box-shadow: var(--shadow);
 }
 .card-title {
-  font-size: .78rem; font-weight: 700; letter-spacing: .07em;
+  font-size: .72rem; font-weight: 700; letter-spacing: .07em;
   text-transform: uppercase; color: var(--ink-muted);
-  margin-bottom: 16px;
+  margin-bottom: 14px;
 }
 
-/* ── FORM ────────────────────────────────── */
-.form-row {
-  display: flex; gap: 10px; flex-wrap: wrap;
-  align-items: flex-end;
-}
-.field { display: flex; flex-direction: column; gap: 5px; flex: 1; min-width: 160px; }
-.field label { font-size: .8rem; font-weight: 600; color: var(--ink-soft); }
-
-input[type="text"], input[type="password"] {
+/* ── FORM ───────────────────────────────── */
+.field { display: flex; flex-direction: column; gap: 5px; margin-bottom: 12px; }
+.field label { font-size: .78rem; font-weight: 600; color: var(--ink-soft); }
+input[type="text"] {
   width: 100%;
-  padding: 9px 13px;
+  padding: 10px 13px;
   border: 1.5px solid var(--border);
   border-radius: 9px;
   font-family: inherit; font-size: .88rem;
@@ -132,140 +153,170 @@ input[type="text"], input[type="password"] {
   outline: none;
   transition: border .18s, box-shadow .18s;
 }
-input:focus {
+input[type="text"]:focus {
   border-color: var(--accent);
   box-shadow: 0 0 0 3px rgba(26,95,74,.12);
   background: #fff;
 }
 
-/* ── BUTTONS ─────────────────────────────── */
+/* ── BUTTONS ────────────────────────────── */
 .btn {
-  display: inline-flex; align-items: center; gap: 7px;
-  padding: 9px 18px;
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  padding: 10px 18px;
   border: none; border-radius: 9px;
   cursor: pointer;
   font-family: inherit; font-size: .85rem; font-weight: 600;
   transition: all .18s; white-space: nowrap;
+  -webkit-tap-highlight-color: transparent;
 }
-.btn-primary   { background: var(--accent);    color: #fff; }
-.btn-primary:hover  { background: var(--accent-dk); transform: translateY(-1px); }
-.btn-red       { background: var(--red);       color: #fff; }
-.btn-red:hover { background: #b91c1c; }
-.btn-ghost     { background: var(--surface-2); color: var(--ink-soft); border: 1.5px solid var(--border); }
-.btn-ghost:hover { background: var(--border); }
-.btn-sm { padding: 6px 13px; font-size: .8rem; border-radius: 7px; }
-.btn:disabled { opacity: .5; pointer-events: none; }
+.btn-primary  { background: var(--accent);    color: #fff; }
+.btn-primary:active { background: var(--accent-dk); }
+.btn-red      { background: var(--red);       color: #fff; }
+.btn-red:active { background: #b91c1c; }
+.btn-ghost    { background: var(--surface-2); color: var(--ink-soft); border: 1.5px solid var(--border); }
+.btn-ghost:active { background: var(--border); }
+.btn-sm       { padding: 6px 12px; font-size: .78rem; border-radius: 7px; }
+.btn-full     { width: 100%; }
+.btn:disabled { opacity: .45; pointer-events: none; }
 
-/* ── SESSION CARDS ───────────────────────── */
+/* ── SEARCH ─────────────────────────────── */
+.search-wrap {
+  position: relative; margin-bottom: 12px;
+}
+.search-wrap input {
+  padding-left: 38px; padding-right: 36px;
+  border-radius: 10px;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+.search-icon {
+  position: absolute; left: 12px; top: 50%;
+  transform: translateY(-50%);
+  font-size: .95rem; color: var(--ink-muted); pointer-events: none;
+}
+.search-clear {
+  position: absolute; right: 10px; top: 50%;
+  transform: translateY(-50%);
+  background: var(--border); border: none;
+  border-radius: 50%; width: 20px; height: 20px;
+  font-size: .7rem; cursor: pointer; color: var(--ink-soft);
+  display: none; align-items: center; justify-content: center;
+}
+.search-clear.visible { display: flex; }
+.search-count {
+  font-size: .74rem; color: var(--ink-muted);
+  margin-bottom: 8px; text-align: right;
+  display: none;
+}
+
+/* ── POLLING CARDS ──────────────────────── */
 .session-card {
   background: var(--surface);
   border-radius: var(--radius);
   box-shadow: var(--shadow);
-  margin-bottom: 14px;
+  margin-bottom: 12px;
   overflow: hidden;
-  animation: fadeUp .3s ease both;
+  animation: fadeUp .25s ease both;
 }
 @keyframes fadeUp {
-  from { opacity: 0; transform: translateY(10px); }
+  from { opacity: 0; transform: translateY(8px); }
   to   { opacity: 1; transform: translateY(0); }
 }
-
 .session-header {
   display: flex; align-items: center; justify-content: space-between;
-  padding: 16px 20px;
+  padding: 13px 16px;
   border-bottom: 1px solid var(--border);
-  gap: 12px;
-  flex-wrap: wrap;
+  gap: 10px;
 }
-.session-name {
-  font-weight: 700; font-size: 1rem; letter-spacing: -.01em;
-}
-.session-header-right {
-  display: flex; align-items: center; gap: 8px;
-}
+.session-name { font-weight: 700; font-size: .95rem; }
+.session-header-right { display: flex; align-items: center; gap: 7px; flex-shrink: 0; }
 .badge {
-  font-size: .72rem; font-weight: 700; letter-spacing: .05em;
-  text-transform: uppercase; padding: 4px 10px; border-radius: 20px;
+  font-size: .68rem; font-weight: 700; letter-spacing: .05em;
+  text-transform: uppercase; padding: 3px 9px; border-radius: 20px;
+  white-space: nowrap;
 }
 .badge-green { background: var(--accent-lt); color: var(--accent); }
 .badge-red   { background: var(--red-lt);    color: var(--red); }
 .badge-gray  { background: var(--border);    color: var(--ink-muted); }
 
-.candidates-list {
-  padding: 12px 20px 16px;
-  display: flex; flex-direction: column; gap: 10px;
-}
+.candidates-list { padding: 10px 16px 14px; display: flex; flex-direction: column; gap: 9px; }
 .candidate-row {
   display: grid;
-  grid-template-columns: 1fr auto auto;
+  grid-template-columns: 1fr auto;
+  grid-template-rows: auto auto auto;
   align-items: center;
-  gap: 12px;
+  gap: 4px 10px;
 }
-.cand-name { font-weight: 500; }
-.cand-votes {
-  font-size: .82rem; color: var(--ink-muted); font-weight: 600;
-  white-space: nowrap;
-}
+.cand-name  { font-weight: 500; font-size: .9rem; grid-column: 1; grid-row: 1; }
+.cand-votes { font-size: .76rem; color: var(--ink-muted); font-weight: 600; grid-column: 1; grid-row: 2; }
+.cand-action { grid-column: 2; grid-row: 1 / 3; display:flex; align-items:center; }
 .vote-bar-wrap {
-  grid-column: 1 / -1;
-  height: 5px; background: var(--border); border-radius: 4px;
-  overflow: hidden;
+  grid-column: 1 / -1; grid-row: 3;
+  height: 4px; background: var(--border); border-radius: 4px;
+  overflow: hidden; margin-top: 2px;
 }
-.vote-bar {
-  height: 100%; background: var(--accent);
-  border-radius: 4px;
-  transition: width .5s ease;
-}
+.vote-bar { height: 100%; background: var(--accent); border-radius: 4px; transition: width .5s ease; }
 
-/* ── EMPTY STATE ─────────────────────────── */
+/* ── EMPTY ──────────────────────────────── */
 .empty {
   text-align: center; padding: 48px 20px;
   color: var(--ink-muted);
 }
-.empty-icon { font-size: 2.5rem; margin-bottom: 12px; }
-.empty p { font-size: .9rem; }
+.empty-icon { font-size: 2.2rem; margin-bottom: 10px; }
+.empty p { font-size: .88rem; }
 
-/* ── TOAST ───────────────────────────────── */
+/* ── STATS ──────────────────────────────── */
+.stats-row { display: flex; gap: 10px; margin-bottom: 12px; }
+.stat-box {
+  flex: 1;
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  border-radius: 10px;
+  padding: 12px 8px;
+  text-align: center;
+  box-shadow: var(--shadow);
+}
+.stat-num { font-size: 1.5rem; font-weight: 700; color: var(--accent); line-height: 1; }
+.stat-lbl { font-size: .68rem; color: var(--ink-muted); font-weight: 600; text-transform: uppercase; letter-spacing: .05em; margin-top: 3px; }
+
+/* ── MANAGE CARD BUTTONS ────────────────── */
+.manage-actions { display: flex; gap: 7px; flex-wrap: wrap; padding: 10px 16px 14px; }
+
+/* ── OPTION INPUT ROW ───────────────────── */
+.option-row {
+  display: flex; gap: 8px; align-items: center; margin-bottom: 8px;
+}
+.option-row input { flex: 1; margin: 0; }
+.option-del {
+  background: none; border: none; cursor: pointer;
+  font-size: 1rem; color: var(--ink-muted); padding: 4px 6px;
+  flex-shrink: 0;
+}
+
+/* ── TOAST ──────────────────────────────── */
 #toast-wrap {
-  position: fixed; bottom: 24px; right: 24px;
-  display: flex; flex-direction: column; gap: 8px;
-  z-index: 9999;
+  position: fixed; bottom: calc(var(--nav-h) + 10px);
+  left: 12px; right: 12px;
+  display: flex; flex-direction: column; gap: 7px;
+  z-index: 9999; align-items: stretch;
 }
 .toast {
-  padding: 11px 18px;
+  padding: 11px 16px;
   border-radius: 10px;
-  font-size: .85rem; font-weight: 600;
+  font-size: .83rem; font-weight: 600;
   box-shadow: var(--shadow-lg);
-  animation: toastIn .25s ease;
-  max-width: 280px;
+  animation: toastIn .22s ease;
+  text-align: center;
 }
 @keyframes toastIn {
-  from { opacity: 0; transform: translateX(20px); }
-  to   { opacity: 1; transform: translateX(0); }
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
 .toast-success { background: var(--ink); color: #fff; }
 .toast-error   { background: var(--red); color: #fff; }
 .toast-warn    { background: var(--amber); color: #fff; }
 
-/* ── DIVIDER ─────────────────────────────── */
-.divider { height: 1px; background: var(--border); margin: 18px 0; }
-
-/* ── STATS ───────────────────────────────── */
-.stats-row {
-  display: flex; gap: 12px; flex-wrap: wrap;
-}
-.stat-box {
-  flex: 1; min-width: 100px;
-  background: var(--surface-2);
-  border: 1.5px solid var(--border);
-  border-radius: 10px;
-  padding: 14px 16px;
-  text-align: center;
-}
-.stat-num { font-size: 1.6rem; font-weight: 700; color: var(--accent); }
-.stat-lbl { font-size: .75rem; color: var(--ink-muted); font-weight: 600; text-transform: uppercase; letter-spacing: .05em; }
-
-/* ── CONFIRM MODAL ───────────────────────── */
+/* ── CONFIRM MODAL ──────────────────────── */
 .modal-backdrop {
   position: fixed; inset: 0;
   background: rgba(0,0,0,.45);
@@ -278,126 +329,17 @@ input:focus {
 .modal-box {
   background: var(--surface);
   border-radius: var(--radius);
-  padding: 24px;
-  max-width: 360px; width: 100%;
+  padding: 22px;
+  max-width: 340px; width: 100%;
   box-shadow: var(--shadow-lg);
-  animation: popUp .2s ease;
+  animation: popUp .18s ease;
 }
-@keyframes popUp {
-  from { transform: scale(.93); opacity: 0; }
-  to   { transform: scale(1);   opacity: 1; }
-}
-.modal-title { font-weight: 700; font-size: 1rem; margin-bottom: 8px; }
-.modal-msg   { font-size: .88rem; color: var(--ink-soft); margin-bottom: 20px; line-height: 1.5; }
-.modal-actions { display: flex; gap: 10px; justify-content: flex-end; }
-
-/* ── ADMIN LOCK ──────────────────────────── */
-.lock-overlay {
-  background: var(--surface-2);
-  border: 1.5px dashed var(--border);
-  border-radius: var(--radius);
-  padding: 28px;
-  text-align: center;
-  color: var(--ink-muted);
-  font-size: .9rem;
-}
-.lock-overlay .icon { font-size: 2rem; margin-bottom: 8px; }
-
-/* ── SEARCH BAR ──────────────────────────── */
-.search-wrap {
-  position: relative;
-  margin-bottom: 16px;
-}
-.search-wrap input {
-  width: 100%;
-  padding: 10px 16px 10px 40px;
-  border: 1.5px solid var(--border);
-  border-radius: 10px;
-  font-family: inherit; font-size: .9rem;
-  color: var(--ink);
-  background: var(--surface);
-  outline: none;
-  transition: border .18s, box-shadow .18s;
-  box-shadow: var(--shadow);
-}
-.search-wrap input:focus {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 3px rgba(26,95,74,.12);
-}
-.search-icon {
-  position: absolute; left: 13px; top: 50%;
-  transform: translateY(-50%);
-  font-size: 1rem; pointer-events: none;
-  color: var(--ink-muted);
-}
-.search-clear {
-  position: absolute; right: 10px; top: 50%;
-  transform: translateY(-50%);
-  background: var(--border); border: none;
-  border-radius: 50%; width: 22px; height: 22px;
-  font-size: .75rem; cursor: pointer; color: var(--ink-soft);
-  display: none; align-items: center; justify-content: center;
-}
-.search-clear.visible { display: flex; }
-.search-count {
-  font-size: .78rem; color: var(--ink-muted);
-  margin-bottom: 10px; text-align: right;
-}
-
-/* ── RESPONSIVE ──────────────────────────── */
-@media (max-width: 600px) {
-  /* Layout */
-  .page { padding: 20px 14px 80px; }
-  .card { padding: 16px; }
-
-  /* Tabs */
-  .tab { font-size: .78rem; padding: 8px 6px; }
-
-  /* Form */
-  .form-row { flex-direction: column; }
-  .field { min-width: unset; width: 100%; }
-  .form-row .btn { width: 100%; justify-content: center; }
-
-  /* Session header — stack name + buttons */
-  .session-header {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 10px;
-  }
-  .session-header-right {
-    width: 100%;
-    flex-wrap: wrap;
-    gap: 6px;
-  }
-  .session-header-right .btn {
-    flex: 1;
-    justify-content: center;
-    min-width: 0;
-  }
-
-  /* Candidate row */
-  .candidate-row {
-    grid-template-columns: 1fr auto;
-    row-gap: 4px;
-  }
-  .cand-votes { grid-column: 1; font-size: .78rem; }
-  .candidate-row .btn { grid-column: 2; grid-row: 1 / 3; align-self: center; }
-  .vote-bar-wrap { grid-column: 1 / -1; }
-
-  /* Stats */
-  .stat-box { min-width: 80px; padding: 12px 10px; }
-  .stat-num { font-size: 1.3rem; }
-
-  /* Toast — full width bottom bar */
-  #toast-wrap {
-    left: 12px; right: 12px; bottom: 16px;
-    align-items: stretch;
-  }
-  .toast { max-width: 100%; text-align: center; }
-}
+@keyframes popUp { from { transform: scale(.93); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+.modal-title { font-weight: 700; font-size: .98rem; margin-bottom: 8px; }
+.modal-msg   { font-size: .85rem; color: var(--ink-soft); margin-bottom: 18px; line-height: 1.5; }
+.modal-actions { display: flex; gap: 8px; justify-content: flex-end; }
 </style>
 </head>
-
 <body>
 
 <header>
@@ -407,88 +349,75 @@ input:focus {
 
 <div id="toast-wrap"></div>
 
-<div class="page">
+<!-- ── PANELS ── -->
+<div class="panels">
 
-  <!-- TABS -->
-  <div class="tabs" role="tablist">
-    <div class="tab active" onclick="switchTab('voter')" role="tab">🗳️ Voting</div>
-    <div class="tab"       onclick="switchTab('admin')"  role="tab">⚙️ Kelola Sesi</div>
-  </div>
-
-  <!-- ── VOTER PANEL ── -->
-  <div class="panel active" id="panel-voter">
+  <!-- Panel 1: Ikut Polling -->
+  <div class="panel active" id="panel-vote">
     <div class="search-wrap">
       <span class="search-icon">🔍</span>
-      <input type="text" id="search-input" placeholder="Cari nama sesi..." oninput="filterSessions(this.value)">
+      <input type="text" id="search-input" placeholder="Cari polling..." oninput="filterSessions(this.value)">
       <button class="search-clear" id="search-clear" onclick="clearSearch()">✕</button>
     </div>
-    <div class="search-count" id="search-count" style="display:none"></div>
+    <div class="search-count" id="search-count" style="display:none;"></div>
     <div id="voter-sessions">
       <div class="empty">
         <div class="empty-icon">⏳</div>
-        <p>Memuat sesi voting...</p>
+        <p>Memuat polling...</p>
       </div>
     </div>
   </div>
 
-  <!-- ── ADMIN PANEL ── -->
-  <div class="panel" id="panel-admin">
+  <!-- Panel 2: Buat Polling -->
+  <div class="panel" id="panel-create">
+    <div class="card">
+      <div class="card-title">Buat Polling Baru</div>
 
-    <div id="admin-content">
-
-      <!-- Stats -->
-      <div class="card" id="admin-stats">
-        <div class="card-title">Ringkasan</div>
-        <div class="stats-row">
-          <div class="stat-box"><div class="stat-num" id="stat-sessions">0</div><div class="stat-lbl">Sesi</div></div>
-          <div class="stat-box"><div class="stat-num" id="stat-active">0</div><div class="stat-lbl">Aktif</div></div>
-          <div class="stat-box"><div class="stat-num" id="stat-votes">0</div><div class="stat-lbl">Total Vote</div></div>
-        </div>
+      <div class="field">
+        <label>Judul Polling</label>
+        <input type="text" id="sessionName" placeholder="cth: menu-makan-siang">
+        <span style="font-size:.72rem;color:var(--ink-muted);margin-top:4px;">Huruf kecil dan tanda hubung, tanpa spasi.</span>
       </div>
 
-      <!-- Buat sesi -->
-      <div class="card">
-        <div class="card-title">Buat Sesi Baru</div>
-        <div class="form-row">
-          <div class="field">
-            <label>Nama Sesi</label>
-            <input type="text" id="sessionName" placeholder="cth: pemilihan-osis-2025">
-          </div>
-          <button class="btn btn-primary" onclick="createSession()">+ Buat Sesi</button>
-        </div>
-        <p style="font-size:.78rem;color:var(--ink-muted);margin-top:8px;">
-          Gunakan huruf kecil dan tanda hubung, tanpa spasi.
-        </p>
+      <div class="field">
+        <label>Pilihan / Opsi</label>
+        <div id="options-list"></div>
+        <button class="btn btn-ghost btn-sm" onclick="addOptionField()" style="align-self:flex-start;margin-top:2px;">+ Tambah Pilihan</button>
       </div>
 
-      <!-- Tambah kandidat -->
-      <div class="card">
-        <div class="card-title">Tambah Kandidat</div>
-        <div class="form-row">
-          <div class="field">
-            <label>Nama Sesi</label>
-            <input type="text" id="candidateSession" placeholder="Nama sesi yang sudah dibuat">
-          </div>
-          <div class="field">
-            <label>Nama Kandidat</label>
-            <input type="text" id="candidateName" placeholder="Nama kandidat">
-          </div>
-          <button class="btn btn-primary" onclick="addCandidate()">+ Tambah</button>
-        </div>
-      </div>
-
-      <!-- Kelola sesi -->
-      <div class="card">
-        <div class="card-title">Kelola Sesi</div>
-        <div id="admin-sessions">
-          <div class="empty"><p>Belum ada sesi.</p></div>
-        </div>
-      </div>
-
+      <button class="btn btn-primary btn-full" style="margin-top:6px;" onclick="createSessionWithOptions()">🚀 Buat Polling</button>
     </div>
   </div>
 
-</div><!-- /page -->
+  <!-- Panel 3: Kelola -->
+  <div class="panel" id="panel-manage">
+    <div class="stats-row">
+      <div class="stat-box"><div class="stat-num" id="stat-sessions">0</div><div class="stat-lbl">Polling</div></div>
+      <div class="stat-box"><div class="stat-num" id="stat-active">0</div><div class="stat-lbl">Aktif</div></div>
+      <div class="stat-box"><div class="stat-num" id="stat-votes">0</div><div class="stat-lbl">Total Suara</div></div>
+    </div>
+    <div id="admin-sessions">
+      <div class="empty"><p>Belum ada polling.</p></div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ── BOTTOM NAV ── -->
+<nav>
+  <button class="nav-item active" id="nav-vote"   onclick="switchTab('vote')">
+    <span class="nav-icon">🗳️</span>
+    <span>Polling</span>
+  </button>
+  <button class="nav-item"        id="nav-create" onclick="switchTab('create')">
+    <span class="nav-icon">➕</span>
+    <span>Buat</span>
+  </button>
+  <button class="nav-item"        id="nav-manage" onclick="switchTab('manage')">
+    <span class="nav-icon">⚙️</span>
+    <span>Kelola</span>
+  </button>
+</nav>
 
 <script type="module">
 // ─────────────────────────────────────────
@@ -529,12 +458,10 @@ function toast(msg, type = "success") {
 
 // ── TABS ──────────────────────────────────
 window.switchTab = (name) => {
-  document.querySelectorAll(".tab").forEach((t,i) => {
-    t.classList.toggle("active", (name==="voter"&&i===0)||(name==="admin"&&i===1));
-  });
-  document.querySelectorAll(".panel").forEach((p,i) => {
-    p.classList.toggle("active", (name==="voter"&&i===0)||(name==="admin"&&i===1));
-  });
+  document.querySelectorAll(".panel").forEach(p => p.classList.remove("active"));
+  document.querySelectorAll(".nav-item").forEach(n => n.classList.remove("active"));
+  document.getElementById("panel-" + name)?.classList.add("active");
+  document.getElementById("nav-"   + name)?.classList.add("active");
 };
 
 // ── DEVICE ID ─────────────────────────────
@@ -591,41 +518,55 @@ window.vote = async (sessionId, candidateId, btn) => {
   }
 };
 
-// ── CREATE SESSION ────────────────────────
-window.createSession = async () => {
+// ── ADD OPTION FIELD ──────────────────────
+window.addOptionField = (value = "") => {
+  const list = document.getElementById("options-list");
+  const idx  = list.children.length;
+  const wrap = document.createElement("div");
+  wrap.style.cssText = "display:flex;gap:8px;align-items:center;";
+  wrap.innerHTML = `
+    <input type="text" class="option-input" placeholder="Pilihan ${idx + 1}" value="${value}"
+      style="flex:1;padding:9px 13px;border:1.5px solid var(--border);border-radius:9px;
+             font-family:inherit;font-size:.88rem;background:var(--surface-2);outline:none;">
+    <button onclick="this.parentElement.remove()" style="background:none;border:none;
+      cursor:pointer;font-size:1.1rem;color:var(--ink-muted);padding:4px 6px;" title="Hapus">✕</button>
+  `;
+  list.appendChild(wrap);
+  wrap.querySelector("input").focus();
+};
+
+// Init 2 option fields on load
+// Init 2 option fields immediately (type=module is already deferred)
+addOptionField();
+addOptionField();
+
+// ── CREATE SESSION + OPTIONS ───────────────
+window.createSessionWithOptions = async () => {
   const name = document.getElementById("sessionName").value.trim().toLowerCase().replace(/\s+/g, "-");
-  if (!name) { toast("Isi nama sesi terlebih dahulu.", "warn"); return; }
+  if (!name) { toast("Isi judul polling terlebih dahulu.", "warn"); return; }
+
+  const optionInputs = [...document.querySelectorAll(".option-input")];
+  const options = optionInputs.map(i => i.value.trim()).filter(Boolean);
+  if (options.length < 2) { toast("Tambahkan minimal 2 pilihan.", "warn"); return; }
 
   const ref  = doc(db, "sessions", name);
   const snap = await getDoc(ref);
-
-  if (snap.exists()) { toast("❌ Nama sesi sudah digunakan!", "error"); return; }
+  if (snap.exists()) { toast("❌ Judul polling sudah digunakan!", "error"); return; }
 
   const creatorDeviceId = getDeviceId();
-
   await setDoc(ref, { active: true, createdAt: Date.now(), creatorDeviceId });
+
+  await Promise.all(
+    options.map(opt => addDoc(collection(db, `sessions/${name}/candidates`), { name: opt, votes: 0 }))
+  );
+
+  // Reset form
   document.getElementById("sessionName").value = "";
-  toast(`✅ Sesi "${name}" berhasil dibuat!`);
-};
+  document.getElementById("options-list").innerHTML = "";
+  addOptionField();
+  addOptionField();
 
-// ── ADD CANDIDATE ─────────────────────────
-window.addCandidate = async () => {
-  const sessionId = document.getElementById("candidateSession").value.trim();
-  const name      = document.getElementById("candidateName").value.trim();
-
-  if (!sessionId || !name) { toast("Lengkapi semua field.", "warn"); return; }
-
-  const sessionSnap = await getDoc(doc(db, "sessions", sessionId));
-  if (!sessionSnap.exists()) { toast("❌ Sesi tidak ditemukan!", "error"); return; }
-
-  if (sessionSnap.data().creatorDeviceId !== getDeviceId()) {
-    toast("🚫 Hanya pembuat sesi yang bisa menambah kandidat.", "error");
-    return;
-  }
-
-  await addDoc(collection(db, `sessions/${sessionId}/candidates`), { name, votes: 0 });
-  document.getElementById("candidateName").value = "";
-  toast(`✅ Kandidat "${name}" ditambahkan!`);
+  toast(`✅ Polling "${name}" berhasil dibuat dengan ${options.length} pilihan!`);
 };
 
 // ── TOGGLE SESSION ────────────────────────
@@ -639,7 +580,7 @@ window.toggleSession = async (id, current) => {
   }
 
   await updateDoc(doc(db, "sessions", id), { active: !current });
-  toast(`Sesi "${id}" ${current ? "ditutup" : "dibuka"}.`);
+  toast(`Polling "${id}" ${current ? "ditutup" : "dibuka"}.`);
 };
 
 // ── CONFIRM MODAL ─────────────────────────
@@ -696,7 +637,7 @@ window.deleteSession = (id) => {
         ]);
 
         await deleteDoc(doc(db, "sessions", id));
-        toast(`🗑️ Sesi "${id}" berhasil dihapus.`);
+        toast(`🗑️ Polling "${id}" berhasil dihapus.`);
       } catch (e) {
         toast(`❌ Gagal: ${e.message || e.code || "unknown error"}`, "error");
         console.error(e);
@@ -725,14 +666,16 @@ function renderCandidates(sessionId, cSnap, container, isActive, isVoter) {
     row.innerHTML = `
       <span class="cand-name">${d.name}</span>
       <span class="cand-votes">${d.votes} suara (${pct}%)</span>
-      ${isVoter
-        ? isActive
-          ? votedSessions.has(sessionId)
-            ? `<span class="badge badge-green">✓ Voted</span>`
-            : `<button class="btn btn-primary btn-sm" onclick="vote('${sessionId}','${d.id}',this)">Vote</button>`
-          : `<span class="badge badge-gray">Tutup</span>`
-        : ""}
-      <div class="vote-bar-wrap" style="grid-column:1/-1">
+      <div class="cand-action">
+        ${isVoter
+          ? isActive
+            ? votedSessions.has(sessionId)
+              ? `<span class="badge badge-green">✓ Voted</span>`
+              : `<button class="btn btn-primary btn-sm" onclick="vote('${sessionId}','${d.id}',this)">Vote</button>`
+            : `<span class="badge badge-gray">Tutup</span>`
+          : ""}
+      </div>
+      <div class="vote-bar-wrap">
         <div class="vote-bar" style="width:${pct}%"></div>
       </div>
     `;
@@ -760,7 +703,7 @@ window.filterSessions = (q) => {
 
   if (val && cards.length > 0) {
     countEl.style.display = "block";
-    countEl.textContent = `${visible} dari ${cards.length} sesi ditemukan`;
+    countEl.textContent = `${visible} dari ${cards.length} polling ditemukan`;
   } else {
     countEl.style.display = "none";
   }
@@ -801,8 +744,8 @@ onSnapshot(collection(db, "sessions"), (snap) => {
   adminContainer.innerHTML = "";
 
   if (snap.empty) {
-    voterContainer.innerHTML = `<div class="empty"><div class="empty-icon">📭</div><p>Belum ada sesi voting.</p></div>`;
-    adminContainer.innerHTML = `<div class="empty"><p>Belum ada sesi.</p></div>`;
+    voterContainer.innerHTML = `<div class="empty"><div class="empty-icon">📭</div><p>Belum ada polling.</p></div>`;
+    adminContainer.innerHTML = `<div class="empty"><p>Belum ada polling.</p></div>`;
     sessionCount = 0; activeCount = 0; updateStats();
     return;
   }
@@ -825,7 +768,7 @@ onSnapshot(collection(db, "sessions"), (snap) => {
         <span class="session-name">${id}</span>
         <div class="session-header-right">
           <span class="badge ${data.active ? "badge-green" : "badge-red"}">
-            ${data.active ? "🟢 Berlangsung" : "🔴 Ditutup"}
+            ${data.active ? "🟢 Aktif" : "🔴 Ditutup"}
           </span>
         </div>
       </div>
@@ -850,13 +793,15 @@ onSnapshot(collection(db, "sessions"), (snap) => {
           <span class="badge ${data.active ? "badge-green" : "badge-gray"}">
             ${data.active ? "Aktif" : "Nonaktif"}
           </span>
-          ${isOwner ? `
-          <button class="btn btn-ghost btn-sm" onclick="toggleSession('${id}',${data.active})">
-            ${data.active ? "Tutup Sesi" : "Buka Sesi"}
-          </button>
-          <button class="btn btn-red btn-sm" onclick="deleteSession('${id}')">🗑️ Hapus</button>
-          ` : ""}
         </div>
+      </div>
+      <div class="manage-actions">
+        ${isOwner ? `
+        <button class="btn btn-ghost btn-sm" onclick="toggleSession('${id}',${data.active})">
+          ${data.active ? "⏸ Tutup" : "▶ Buka"}
+        </button>
+        <button class="btn btn-red btn-sm" onclick="deleteSession('${id}')">🗑️ Hapus</button>
+        ` : `<span style="font-size:.78rem;color:var(--ink-muted);">Dibuat orang lain</span>`}
       </div>
       <div class="candidates-list" id="ac-${id}"></div>
     `;
@@ -885,5 +830,61 @@ onSnapshot(collection(db, "sessions"), (snap) => {
 });
 </script>
 
+
+<script>
+// ── INLINE MANIFEST ──────────────────────
+const manifest = {
+  name: "VoteKu — Polling Online",
+  short_name: "VoteKu",
+  description: "Polling realtime untuk semua",
+  start_url: "./",
+  display: "standalone",
+  background_color: "#0d1117",
+  theme_color: "#0d1117",
+  orientation: "portrait",
+  icons: [
+    {
+      src: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' rx='100' fill='%230d1117'/%3E%3Ctext x='256' y='340' text-anchor='middle' font-size='280' font-family='serif'%3E🗳%3C/text%3E%3C/svg%3E",
+      sizes: "512x512",
+      type: "image/svg+xml",
+      purpose: "any maskable"
+    }
+  ]
+};
+const blob = new Blob([JSON.stringify(manifest)], { type: "application/json" });
+const manifestURL = URL.createObjectURL(blob);
+const link = document.createElement("link");
+link.rel = "manifest"; link.href = manifestURL;
+document.head.appendChild(link);
+
+// ── INLINE SERVICE WORKER ─────────────────
+if ("serviceWorker" in navigator) {
+  const sw = `
+    const CACHE = "voteku-v1";
+    const SHELL = [self.location.href.replace(/\/[^\/]*$/, "/")];
+    self.addEventListener("install", e => {
+      e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL).catch(()=>{})));
+      self.skipWaiting();
+    });
+    self.addEventListener("activate", e => {
+      e.waitUntil(caches.keys().then(ks => Promise.all(
+        ks.filter(k => k !== CACHE).map(k => caches.delete(k))
+      )));
+      self.clients.claim();
+    });
+    self.addEventListener("fetch", e => {
+      if (e.request.mode === "navigate") {
+        e.respondWith(
+          fetch(e.request).catch(() => caches.match(e.request))
+        );
+      }
+    });
+  `;
+  const swBlob = new Blob([sw], { type: "application/javascript" });
+  const swURL  = URL.createObjectURL(swBlob);
+  navigator.serviceWorker.register(swURL, { scope: "./" })
+    .catch(() => {});
+}
+</script>
 </body>
 </html>
