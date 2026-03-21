@@ -265,6 +265,32 @@ input:focus {
 .stat-num { font-size: 1.6rem; font-weight: 700; color: var(--accent); }
 .stat-lbl { font-size: .75rem; color: var(--ink-muted); font-weight: 600; text-transform: uppercase; letter-spacing: .05em; }
 
+/* ── CONFIRM MODAL ───────────────────────── */
+.modal-backdrop {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,.45);
+  z-index: 1000;
+  display: flex; align-items: center; justify-content: center;
+  padding: 20px;
+  animation: fadeIn .15s ease;
+}
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+.modal-box {
+  background: var(--surface);
+  border-radius: var(--radius);
+  padding: 24px;
+  max-width: 360px; width: 100%;
+  box-shadow: var(--shadow-lg);
+  animation: popUp .2s ease;
+}
+@keyframes popUp {
+  from { transform: scale(.93); opacity: 0; }
+  to   { transform: scale(1);   opacity: 1; }
+}
+.modal-title { font-weight: 700; font-size: 1rem; margin-bottom: 8px; }
+.modal-msg   { font-size: .88rem; color: var(--ink-soft); margin-bottom: 20px; line-height: 1.5; }
+.modal-actions { display: flex; gap: 10px; justify-content: flex-end; }
+
 /* ── ADMIN LOCK ──────────────────────────── */
 .lock-overlay {
   background: var(--surface-2);
@@ -278,10 +304,55 @@ input:focus {
 .lock-overlay .icon { font-size: 2rem; margin-bottom: 8px; }
 
 /* ── RESPONSIVE ──────────────────────────── */
-@media (max-width: 500px) {
+@media (max-width: 600px) {
+  /* Layout */
+  .page { padding: 20px 14px 80px; }
+  .card { padding: 16px; }
+
+  /* Tabs */
+  .tab { font-size: .78rem; padding: 8px 6px; }
+
+  /* Form */
   .form-row { flex-direction: column; }
   .field { min-width: unset; width: 100%; }
-  .candidate-row { grid-template-columns: 1fr auto; }
+  .form-row .btn { width: 100%; justify-content: center; }
+
+  /* Session header — stack name + buttons */
+  .session-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+  .session-header-right {
+    width: 100%;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .session-header-right .btn {
+    flex: 1;
+    justify-content: center;
+    min-width: 0;
+  }
+
+  /* Candidate row */
+  .candidate-row {
+    grid-template-columns: 1fr auto;
+    row-gap: 4px;
+  }
+  .cand-votes { grid-column: 1; font-size: .78rem; }
+  .candidate-row .btn { grid-column: 2; grid-row: 1 / 3; align-self: center; }
+  .vote-bar-wrap { grid-column: 1 / -1; }
+
+  /* Stats */
+  .stat-box { min-width: 80px; padding: 12px 10px; }
+  .stat-num { font-size: 1.3rem; }
+
+  /* Toast — full width bottom bar */
+  #toast-wrap {
+    left: 12px; right: 12px; bottom: 16px;
+    align-items: stretch;
+  }
+  .toast { max-width: 100%; text-align: center; }
 }
 </style>
 </head>
@@ -290,7 +361,7 @@ input:focus {
 
 <header>
   <div class="logo">Vote<span>Ku</span></div>
-  <div class="header-badge">🔒 Realtime</div>
+  <div class="header-badge">⚡ Realtime</div>
 </header>
 
 <div id="toast-wrap"></div>
@@ -300,7 +371,7 @@ input:focus {
   <!-- TABS -->
   <div class="tabs" role="tablist">
     <div class="tab active" onclick="switchTab('voter')" role="tab">🗳️ Voting</div>
-    <div class="tab"       onclick="switchTab('admin')"  role="tab">⚙️ Admin</div>
+    <div class="tab"       onclick="switchTab('admin')"  role="tab">⚙️ Kelola Sesi</div>
   </div>
 
   <!-- ── VOTER PANEL ── -->
@@ -441,23 +512,15 @@ window.vote = async (sessionId, candidateId, btn) => {
   btn.textContent = "...";
 
   const deviceId = getDeviceId();
-  const ip = await getIP();
-
   const voterRef = doc(db, `sessions/${sessionId}/voters/${deviceId}`);
-  const ipRef    = doc(db, `sessions/${sessionId}/ipVotes/${ip}`);
 
-  const [voterSnap, ipSnap, sessionSnap] = await Promise.all([
+  const [voterSnap, sessionSnap] = await Promise.all([
     getDoc(voterRef),
-    getDoc(ipRef),
     getDoc(doc(db, "sessions", sessionId))
   ]);
 
   if (voterSnap.exists()) {
     toast("⚠️ Perangkat ini sudah pernah voting!", "warn");
-    btn.disabled = false; btn.textContent = "Vote"; return;
-  }
-  if (ipSnap.exists()) {
-    toast("⚠️ IP ini sudah pernah voting!", "warn");
     btn.disabled = false; btn.textContent = "Vote"; return;
   }
   if (!sessionSnap.data()?.active) {
@@ -466,8 +529,7 @@ window.vote = async (sessionId, candidateId, btn) => {
   }
 
   await updateDoc(doc(db, `sessions/${sessionId}/candidates/${candidateId}`), { votes: increment(1) });
-  await setDoc(voterRef, { voted: true, ip, time: Date.now() });
-  await setDoc(ipRef,    { used: true,  time: Date.now() });
+  await setDoc(voterRef, { voted: true, time: Date.now() });
 
   toast("✅ Vote berhasil! Terima kasih.");
 };
@@ -482,7 +544,10 @@ window.createSession = async () => {
 
   if (snap.exists()) { toast("❌ Nama sesi sudah digunakan!", "error"); return; }
 
-  await setDoc(ref, { active: true, createdAt: Date.now() });
+  const creatorDeviceId = getDeviceId();
+  const creatorIp       = await getIP();
+
+  await setDoc(ref, { active: true, createdAt: Date.now(), creatorDeviceId, creatorIp });
   document.getElementById("sessionName").value = "";
   toast(`✅ Sesi "${name}" berhasil dibuat!`);
 };
@@ -508,31 +573,69 @@ window.toggleSession = async (id, current) => {
   toast(`Sesi "${id}" ${current ? "ditutup" : "dibuka"}.`);
 };
 
+// ── CONFIRM MODAL ─────────────────────────
+function showConfirm(title, msg, onConfirm) {
+  const backdrop = document.createElement("div");
+  backdrop.className = "modal-backdrop";
+  backdrop.innerHTML = `
+    <div class="modal-box">
+      <div class="modal-title">${title}</div>
+      <div class="modal-msg">${msg}</div>
+      <div class="modal-actions">
+        <button class="btn btn-ghost" id="modal-cancel">Batal</button>
+        <button class="btn btn-red"   id="modal-ok">Hapus</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(backdrop);
+
+  const close = () => backdrop.remove();
+  backdrop.querySelector("#modal-cancel").onclick = close;
+  backdrop.querySelector("#modal-ok").onclick = () => { close(); onConfirm(); };
+  backdrop.addEventListener("click", e => { if (e.target === backdrop) close(); });
+}
+
 // ── DELETE SESSION ────────────────────────
-window.deleteSession = async (id) => {
-  if (!confirm(`Hapus sesi "${id}"? Semua data kandidat dan vote akan terhapus permanen.`)) return;
+window.deleteSession = (id) => {
+  showConfirm(
+    "🗑️ Hapus Sesi",
+    `Yakin ingin menghapus sesi <strong>"${id}"</strong>?<br>Semua kandidat dan data vote akan terhapus permanen.`,
+    async () => {
+      try {
+        // Verifikasi kepemilikan sebelum hapus
+        const sessionSnap = await getDoc(doc(db, "sessions", id));
+        if (!sessionSnap.exists()) { toast("❌ Sesi tidak ditemukan.", "error"); return; }
 
-  try {
-    // Hapus subcollection candidates
-    const cSnap = await getDocs(collection(db, `sessions/${id}/candidates`));
-    await Promise.all(cSnap.docs.map(d => deleteDoc(d.ref)));
+        const sData = sessionSnap.data();
+        const myDeviceId = getDeviceId();
+        const myIp       = await getIP();
 
-    // Hapus subcollection voters
-    const vSnap = await getDocs(collection(db, `sessions/${id}/voters`));
-    await Promise.all(vSnap.docs.map(d => deleteDoc(d.ref)));
+        const isOwner = sData.creatorDeviceId === myDeviceId || sData.creatorIp === myIp;
+        if (!isOwner) {
+          toast("🚫 Kamu bukan pembuat sesi ini.", "error");
+          return;
+        }
 
-    // Hapus subcollection ipVotes
-    const iSnap = await getDocs(collection(db, `sessions/${id}/ipVotes`));
-    await Promise.all(iSnap.docs.map(d => deleteDoc(d.ref)));
+        const [cSnap, vSnap, iSnap] = await Promise.all([
+          getDocs(collection(db, `sessions/${id}/candidates`)),
+          getDocs(collection(db, `sessions/${id}/voters`)),
+          getDocs(collection(db, `sessions/${id}/ipVotes`)),
+        ]);
 
-    // Hapus dokumen sesi
-    await deleteDoc(doc(db, "sessions", id));
+        await Promise.all([
+          ...cSnap.docs.map(d => deleteDoc(d.ref)),
+          ...vSnap.docs.map(d => deleteDoc(d.ref)),
+          ...iSnap.docs.map(d => deleteDoc(d.ref)),
+        ]);
 
-    toast(`🗑️ Sesi "${id}" berhasil dihapus.`);
-  } catch (e) {
-    toast("❌ Gagal menghapus sesi.", "error");
-    console.error(e);
-  }
+        await deleteDoc(doc(db, "sessions", id));
+        toast(`🗑️ Sesi "${id}" berhasil dihapus.`);
+      } catch (e) {
+        toast(`❌ Gagal: ${e.message || e.code || "unknown error"}`, "error");
+        console.error(e);
+      }
+    }
+  );
 };
 
 // ── RENDER CANDIDATES ─────────────────────
@@ -613,12 +716,18 @@ onSnapshot(collection(db, "sessions"), (snap) => {
     voterContainer.appendChild(vCard);
 
     // ── Admin card
+    const myDeviceId = getDeviceId();
+    const isOwner = data.creatorDeviceId === myDeviceId;
+
     const aCard = document.createElement("div");
     aCard.className = "session-card";
     aCard.style.marginBottom = "10px";
     aCard.innerHTML = `
       <div class="session-header">
-        <span class="session-name">${id}</span>
+        <div>
+          <span class="session-name">${id}</span>
+          ${isOwner ? `<span style="font-size:.72rem;color:var(--accent);font-weight:600;margin-left:8px;">✏️ Milik kamu</span>` : ""}
+        </div>
         <div class="session-header-right">
           <span class="badge ${data.active ? "badge-green" : "badge-gray"}">
             ${data.active ? "Aktif" : "Nonaktif"}
@@ -626,7 +735,7 @@ onSnapshot(collection(db, "sessions"), (snap) => {
           <button class="btn btn-ghost btn-sm" onclick="toggleSession('${id}',${data.active})">
             ${data.active ? "Tutup Sesi" : "Buka Sesi"}
           </button>
-          <button class="btn btn-red btn-sm" onclick="deleteSession('${id}')">🗑️ Hapus</button>
+          ${isOwner ? `<button class="btn btn-red btn-sm" onclick="deleteSession('${id}')">🗑️ Hapus</button>` : ""}
         </div>
       </div>
       <div class="candidates-list" id="ac-${id}"></div>
