@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#0d1117">
+<link rel="manifest" href="data:application/manifest+json,%7B%22name%22%3A%22VoteKu%20%5Cu2014%20Polling%20Online%22%2C%22short_name%22%3A%22VoteKu%22%2C%22description%22%3A%22Polling%20realtime%20untuk%20semua%22%2C%22start_url%22%3A%22.%2F%22%2C%22display%22%3A%22standalone%22%2C%22background_color%22%3A%22%230d1117%22%2C%22theme_color%22%3A%22%230d1117%22%2C%22orientation%22%3A%22portrait%22%2C%22icons%22%3A%5B%7B%22src%22%3A%22data%3Aimage%2Fsvg%2Bxml%2C%253Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20viewBox%3D%270%200%20512%20512%27%253E%253Crect%20width%3D%27512%27%20height%3D%27512%27%20rx%3D%27100%27%20fill%3D%27%25230d1117%27%2F%253E%253Ctext%20x%3D%27256%27%20y%3D%27340%27%20text-anchor%3D%27middle%27%20font-size%3D%27280%27%20font-family%3D%27serif%27%253E%25F0%259F%2597%25B3%253C%2Ftext%253E%253C%2Fsvg%253E%22%2C%22sizes%22%3A%22512x512%22%2C%22type%22%3A%22image%2Fsvg%2Bxml%22%2C%22purpose%22%3A%22any%20maskable%22%7D%5D%7D">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -911,58 +912,25 @@ onSnapshot(collection(db, "sessions"), (snap) => {
 
 
 <script>
-// ── INLINE MANIFEST ──────────────────────
-const manifest = {
-  name: "VoteKu — Polling Online",
-  short_name: "VoteKu",
-  description: "Polling realtime untuk semua",
-  start_url: "./",
-  display: "standalone",
-  background_color: "#0d1117",
-  theme_color: "#0d1117",
-  orientation: "portrait",
-  icons: [
-    {
-      src: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' rx='100' fill='%230d1117'/%3E%3Ctext x='256' y='340' text-anchor='middle' font-size='280' font-family='serif'%3E🗳%3C/text%3E%3C/svg%3E",
-      sizes: "512x512",
-      type: "image/svg+xml",
-      purpose: "any maskable"
-    }
-  ]
-};
-const blob = new Blob([JSON.stringify(manifest)], { type: "application/json" });
-const manifestURL = URL.createObjectURL(blob);
-const link = document.createElement("link");
-link.rel = "manifest"; link.href = manifestURL;
-document.head.appendChild(link);
-
-// ── INLINE SERVICE WORKER ─────────────────
+// ── SERVICE WORKER (inline blob) ─────────
 if ("serviceWorker" in navigator) {
   const sw = `
-    const CACHE = "voteku-v1";
-    const SHELL = [self.location.href.replace(/\/[^\/]*$/, "/")];
-    self.addEventListener("install", e => {
-      e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL).catch(()=>{})));
-      self.skipWaiting();
-    });
+    const CACHE = "voteku-v2";
+    self.addEventListener("install", e => { self.skipWaiting(); });
     self.addEventListener("activate", e => {
-      e.waitUntil(caches.keys().then(ks => Promise.all(
-        ks.filter(k => k !== CACHE).map(k => caches.delete(k))
-      )));
+      e.waitUntil(caches.keys().then(ks =>
+        Promise.all(ks.filter(k => k !== CACHE).map(k => caches.delete(k)))
+      ));
       self.clients.claim();
     });
     self.addEventListener("fetch", e => {
       if (e.request.mode === "navigate") {
-        e.respondWith(
-          fetch(e.request).catch(() => caches.match(e.request))
-        );
+        e.respondWith(fetch(e.request).catch(() => caches.match(e.request)));
       }
     });
   `;
-  const swBlob = new Blob([sw], { type: "application/javascript" });
-  const swURL  = URL.createObjectURL(swBlob);
-  navigator.serviceWorker.register(swURL, { scope: "./" })
-    .catch(() => {});
+  const swURL = URL.createObjectURL(new Blob([sw], { type: "application/javascript" }));
+  navigator.serviceWorker.register(swURL, { scope: "./" }).catch(() => {});
 }
 </script>
 </body>
