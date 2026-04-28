@@ -1,12 +1,18 @@
-// manifest.json
 {
   "name": "VoteKu — Polling Online",
   "short_name": "VoteKu",
+  "description": "Buat dan ikuti polling online secara realtime dengan mudah.",
+  "id": "/",
   "start_url": "./",
+  "scope": "./",
   "display": "standalone",
-  "background_color": "#1a64c8",
+  "display_override": ["window-controls-overlay", "standalone", "minimal-ui"],
+  "background_color": "#0d1117",
   "theme_color": "#0d1117",
-  "orientation": "portrait",
+  "orientation": "portrait-primary",
+  "lang": "id",
+  "dir": "ltr",
+  "categories": ["productivity", "utilities", "social"],
   "icons": [
     {
       "src": "./icon/icon-192.png",
@@ -19,6 +25,23 @@
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"
+    },
+    {
+      "src": "./icon/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
     }
-  ]
+  ],
+  "shortcuts": [
+    {
+      "name": "Buat Polling",
+      "short_name": "Buat",
+      "description": "Buat polling baru",
+      "url": "./?tab=create",
+      "icons": [{ "src": "./icon/icon-192.png", "sizes": "192x192" }]
+    }
+  ],
+  "screenshots": [],
+  "prefer_related_applications": false
 }

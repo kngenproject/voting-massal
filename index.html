@@ -11,6 +11,23 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="VoteKu">
+<meta name="application-name" content="VoteKu">
+<meta name="description" content="Buat dan ikuti polling online secara realtime dengan mudah.">
+<meta name="format-detection" content="telephone=no">
+<!-- Open Graph -->
+<meta property="og:type" content="website">
+<meta property="og:title" content="VoteKu — Polling Online">
+<meta property="og:description" content="Buat dan ikuti polling online secara realtime.">
+<meta property="og:image" content="./icon/icon-512.png">
+<!-- Twitter Card -->
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="VoteKu — Polling Online">
+<meta name="twitter:description" content="Buat dan ikuti polling online secara realtime.">
+<meta name="twitter:image" content="./icon/icon-512.png">
+<!-- Apple splash screens (portrait iPhone) -->
+<link rel="apple-touch-startup-image" href="./icon/icon-512.png">
+<!-- Favicon fallback -->
+<link rel="icon" type="image/png" sizes="192x192" href="./icon/icon-192.png">
 <title>VoteKu — Polling Online</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -359,9 +376,56 @@ input[type="text"]:focus {
 .modal-title { font-weight: 700; font-size: .98rem; margin-bottom: 8px; }
 .modal-msg   { font-size: .85rem; color: var(--ink-soft); margin-bottom: 18px; line-height: 1.5; }
 .modal-actions { display: flex; gap: 8px; justify-content: flex-end; }
+
+/* ── PWA: OFFLINE BANNER ─────────────────── */
+#offline-banner {
+  display: none;
+  position: fixed; top: var(--header-h); left: 0; right: 0;
+  background: var(--amber); color: #fff;
+  font-size: .78rem; font-weight: 700;
+  text-align: center; padding: 7px 16px;
+  z-index: 300; letter-spacing: .03em;
+  animation: toastIn .3s ease;
+}
+#offline-banner.show { display: block; }
+
+/* ── PWA: INSTALL PROMPT ─────────────────── */
+#install-prompt {
+  display: none;
+  position: fixed; bottom: calc(var(--nav-h) + 10px);
+  left: 12px; right: 12px;
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-lg);
+  padding: 14px 16px;
+  z-index: 500;
+  animation: popUp .22s ease;
+  align-items: center; gap: 12px;
+}
+#install-prompt.show { display: flex; }
+.install-icon { font-size: 1.8rem; flex-shrink: 0; }
+.install-text { flex: 1; }
+.install-text strong { display: block; font-size: .9rem; margin-bottom: 2px; }
+.install-text span   { font-size: .76rem; color: var(--ink-muted); }
+.install-actions { display: flex; gap: 7px; flex-shrink: 0; }
+
 </style>
 </head>
 <body>
+
+<div id="offline-banner">⚠️ Kamu sedang offline. Beberapa fitur mungkin tidak tersedia.</div>
+<div id="install-prompt">
+  <div class="install-icon">📲</div>
+  <div class="install-text">
+    <strong>Pasang VoteKu</strong>
+    <span>Install ke layar utama untuk akses cepat</span>
+  </div>
+  <div class="install-actions">
+    <button class="btn btn-ghost btn-sm" id="install-dismiss">Nanti</button>
+    <button class="btn btn-primary btn-sm" id="install-accept">Install</button>
+  </div>
+</div>
 
 <header>
   <div class="logo">Vote<span>Ku</span></div>
@@ -891,6 +955,13 @@ function handleDeepLink() {
   setTimeout(() => tryHighlight(), 400);
 }
 
+// Handle ?tab= query param
+(function handleTabParam() {
+  const params = new URLSearchParams(location.search);
+  const tab = params.get("tab");
+  if (tab && ["vote","create","manage"].includes(tab)) switchTab(tab);
+})();
+
 handleDeepLink();
 
 // ── REALTIME LISTENER ────────────────────
@@ -1013,9 +1084,84 @@ onSnapshot(collection(db, "sessions"), (snap) => {
 </script>
 
 <script>
+// ── SERVICE WORKER ─────────────────────────────
 if ("serviceWorker" in navigator) {
-  navigator.serviceWorker.register('./sw.js', { scope: "./" }).catch(() => {});
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("./sw.js", { scope: "./" })
+      .then((reg) => {
+        console.log("[PWA] SW registered, scope:", reg.scope);
+        // Cek update setiap 60 detik
+        setInterval(() => reg.update(), 60_000);
+        // Notifikasi kalau ada SW baru
+        reg.addEventListener("updatefound", () => {
+          const newWorker = reg.installing;
+          newWorker?.addEventListener("statechange", () => {
+            if (newWorker.state === "installed" && navigator.serviceWorker.controller) {
+              toast("🔄 Update tersedia! Refresh untuk memperbarui.", "warn");
+            }
+          });
+        });
+      })
+      .catch((err) => console.warn("[PWA] SW gagal:", err));
+  });
 }
+
+// ── OFFLINE / ONLINE DETECTION ──────────────────
+const offlineBanner = document.getElementById("offline-banner");
+function updateOnlineStatus() {
+  if (navigator.onLine) {
+    offlineBanner.classList.remove("show");
+  } else {
+    offlineBanner.classList.add("show");
+  }
+}
+window.addEventListener("online",  updateOnlineStatus);
+window.addEventListener("offline", updateOnlineStatus);
+updateOnlineStatus();
+
+// ── A2HS INSTALL PROMPT ─────────────────────────
+let deferredPrompt = null;
+const installPrompt  = document.getElementById("install-prompt");
+const installAccept  = document.getElementById("install-accept");
+const installDismiss = document.getElementById("install-dismiss");
+
+// Sembunyikan jika pernah dismiss
+if (localStorage.getItem("voteku_install_dismissed")) {
+  installPrompt.remove();
+}
+
+window.addEventListener("beforeinstallprompt", (e) => {
+  e.preventDefault();
+  deferredPrompt = e;
+  // Tampilkan setelah 3 detik agar UX tidak mengganggu
+  setTimeout(() => {
+    if (!localStorage.getItem("voteku_install_dismissed")) {
+      installPrompt.classList.add("show");
+    }
+  }, 3000);
+});
+
+installAccept?.addEventListener("click", async () => {
+  installPrompt.classList.remove("show");
+  if (deferredPrompt) {
+    deferredPrompt.prompt();
+    const { outcome } = await deferredPrompt.userChoice;
+    if (outcome === "accepted") toast("🎉 VoteKu berhasil dipasang!");
+    deferredPrompt = null;
+  }
+});
+
+installDismiss?.addEventListener("click", () => {
+  installPrompt.classList.remove("show");
+  localStorage.setItem("voteku_install_dismissed", "1");
+});
+
+// Deteksi sudah installed (standalone)
+window.addEventListener("appinstalled", () => {
+  toast("✅ VoteKu terpasang di layar utama!");
+  installPrompt.classList.remove("show");
+  deferredPrompt = null;
+});
 </script>
 </body>
 </html>
